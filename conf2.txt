@@ -1,0 +1,10 @@
+File Path   : L1_20211202_084700_4MHz_IQ.bin
+Date Time   : 2021-12-01 08:47:00 UTC
+Duration    : 100 ms
+Conf File   : conf/pocket_L1L2_4MHz.conf
+Channel     : 1
+F_LO        : 1575.420 MHz
+F_ADC       : 4.000 MHz
+Sampling    : IQ
+F_IF        : 0.0 MHz
+BW_IF       : 2.5 MHz
