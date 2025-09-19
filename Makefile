@@ -1,5 +1,5 @@
 NAME = test.vcd
-SRCS = tb.sv
+SRCS = tb.sv cacode.v
 OBJS = a.out
 
 $(OBJS): $(SRCS)
