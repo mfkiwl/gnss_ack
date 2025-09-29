@@ -22,7 +22,7 @@ CACODE uut (
     .clk(clk),
     .g2_init(1'b1),
     .init(init),
-    .rd(1'b0),
+    .rd(1'b1),
     .chip(chip)
 );
 
