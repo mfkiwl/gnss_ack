@@ -20,9 +20,10 @@ always #10 clk = ~clk;
 CACODE uut (
     .rst(rst),
     .clk(clk),
-    .g2_init(1'b1),
-    .init(init),
-    .rd(1'b1),
+    .g1_init(10'b11_1111_1111),
+    .g2_init(10'b11_1111_1111),
+    .T0(4'd2),
+    .T1(4'd6),
     .chip(chip)
 );
 
@@ -45,12 +46,11 @@ num = 0;
 $display("%d: %b", num, tmp[3:0]);
 */
 
-init = {2'b0, 4'd2, 4'd6};
 clk = 1'b0;
 rst = 1'b0;
-#10;
+#13;
 rst = 1'b1;
-#10;
+#22;
 rst = 1'b0;
 #20000;
 
