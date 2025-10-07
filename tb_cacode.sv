@@ -52,9 +52,21 @@ rst = 1'b0;
 rst = 1'b1;
 #22;
 rst = 1'b0;
-#20000;
+#40000;
 
 $finish;
+end
+
+integer i;
+initial
+begin
+	i = 0;
+	#35;
+	repeat(1023) @(posedge clk)
+	begin
+		$display("%h", {uut.g1, uut.g2});
+		i = i + 1;
+	end
 end
 
 endmodule
