@@ -11,17 +11,31 @@ integer num;
 integer rnum;
 
 reg clk;
-reg rst;
+reg grst;
+logic rst;
 reg [9:0] init;
 wire chip;
 
+logic [9:0] g1;
+logic [9:0] g2;
+logic [9:0] phase;
+
 always #10 clk = ~clk;
+
+code_phase_to_lfsr pp
+(
+	.clk(clk),
+	.rst(grst),
+	.phase(phase),
+	.g1(g1),
+	.g2(g2)
+);
 
 CACODE uut (
     .rst(rst),
     .clk(clk),
-    .g1_init(10'b11_1111_1111),
-    .g2_init(10'b11_1111_1111),
+    .g1_init(g1),
+    .g2_init(g2),
     .T0(4'd2),
     .T1(4'd6),
     .chip(chip)
@@ -47,12 +61,26 @@ $display("%d: %b", num, tmp[3:0]);
 */
 
 clk = 1'b0;
-rst = 1'b0;
-#13;
 rst = 1'b1;
-#22;
+grst = 1'b0;
+phase = 10'd0;
+#13;
 rst = 1'b0;
-#40000;
+#22;
+rst = 1'b1;
+
+grst = 1'b1;
+
+repeat (10) @(posedge clk);
+
+rst = 1'b0;
+phase = 10'd1;
+#57;
+rst = 1'b1;
+repeat (10) @(posedge clk);
+
+
+
 
 $finish;
 end
