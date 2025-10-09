@@ -21,6 +21,8 @@
 module CACODE (
     input  wire        rst,
     input  wire        clk,
+	input  wire        rd,
+	input  wire        set_reg,
 	input  wire [9:0]  g1_init,
     input  wire [9:0]  g2_init,
     input  wire [4:1]  T0,
@@ -35,15 +37,21 @@ module CACODE (
 
     always @ (posedge clk)
         if (!rst) begin
-            // g1 <= 10'b1111111111;
-            // g2 <= g2_init? init : 10'b1111111111;
+            g1 <= 10'b1111111111;
+            g2 <= 10'b1111111111;
+		end
+		else if (set_reg)
+		begin
 			g1 <= g1_init;
 			g2 <= g2_init;
         end
 		else
 		begin
-			g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
-			g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
+			if (rd)
+			begin
+				g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
+				g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
+			end
 		end
 
     //assign chip = g2_init? (g1[10] ^ g2[10]) : (g1[10] ^ g2[T0] ^ g2[T1]);
