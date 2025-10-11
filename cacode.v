@@ -35,7 +35,7 @@ module CACODE (
 
 	reg [10:1] g1, g2;
 
-    always @ (posedge clk)
+    always @ (posedge clk or negedge rst)
         if (!rst) begin
             g1 <= 10'b1111111111;
             g2 <= 10'b1111111111;

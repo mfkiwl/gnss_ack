@@ -7,17 +7,21 @@ module cacode_arb_phi_omega
 	input wire set_reg,
 	input wire [4:1] T0,
 	input wire [4:1] T1,
-	input wire [7:0] nco_omega,
+	input wire [8:0] nco_omega,
 	output wire chip
 );
 
-logic [7:0] phase;
+logic [8:0] phase;
 logic rd;
 
 always_ff @(posedge clk or negedge rst)
 begin
 	if (!rst) phase <= 20'b0;
-	else {rd, phase} <= phase + nco_omega;
+	else
+	begin
+		if (set_reg) phase <= 20'b0;
+		else {rd, phase} <= phase + nco_omega;
+	end
 end
 
 CACODE uut (
