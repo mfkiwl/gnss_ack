@@ -103,7 +103,7 @@ assign rise_ad_clk = ~delay_ad_clk[1] & delay_ad_clk[0];
 
 logic [1022:0] i;
 logic [1022:0] q;
-logic [9:0] acq_counter;
+logic [11:0] acq_counter;
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
@@ -131,6 +131,42 @@ begin
         end
     end
 end
+
+logic [10:1] g1;
+logic [10:1] g2;
+
+logic [11:0] integrator_counter;
+logic [11:0] integrator_0;
+logic [11:0] integrator_1;
+logic [11:0] integrator_2;
+logic [11:0] integrator_3;
+logic [11:0] integrator_4;
+logic [11:0] integrator_5;
+logic [11:0] integrator_6;
+logic [11:0] integrator_7;
+logic [11:0] integrator_8;
+logic [11:0] integrator_9;
+
+always_ff @(posedge clk or negedge rst)
+begin
+    if (!rst)
+	begin
+		integrator_counter <= 12'b0;
+		integrator_0 <= 12'b0;
+		integrator_1 <= 12'b0;
+		integrator_2 <= 12'b0;
+		integrator_3 <= 12'b0;
+		integrator_4 <= 12'b0;
+		integrator_5 <= 12'b0;
+		integrator_6 <= 12'b0;
+		integrator_7 <= 12'b0;
+		integrator_8 <= 12'b0;
+		integrator_9 <= 12'b0;
+		g1 <= 10'b11_1111_1111;
+		g2 <= 10'b11_1111_1111;
+	end
+end
+
 
 
 
