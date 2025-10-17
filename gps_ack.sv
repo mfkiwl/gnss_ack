@@ -75,11 +75,13 @@ function corr;
 endfunction
 
 
-
 typedef enum logic [3:0]
 {
+    HOLD,
     CORRECT_SAMPLE,
-    ACQUISITION,
+    ACQ_INIT,
+    CORR,
+    ACQ_END,
     DONE
 } state_t;
 
@@ -89,6 +91,29 @@ always_ff @(posedge clk or negedge rst)
 begin
     if (!rst) current_state <= CORRECT_SAMPLE;
     else current_state <= next_state;
+end
+
+always_comb
+begin
+    case (current_state)
+        HOLD:
+        CORRECT_SAMPLE:
+        begin
+            if (acq_count_full == 4095)
+            begin
+                next_state = ACQ_INIT;
+            end
+            else
+            begin
+                next_state = acq_count_full;
+            end
+        end
+        ACQ_INIT:
+        CORR:
+        ACQ_END:
+        DONE:
+        default: next_state = CORRECT_SAMPLE;
+    endcase
 end
 
 logic [1:0] delay_ad_clk;
@@ -101,36 +126,51 @@ end
 
 assign rise_ad_clk = ~delay_ad_clk[1] & delay_ad_clk[0];
 
-logic [1022:0] i;
-logic [1022:0] q;
-logic [11:0] acq_counter;
+logic [4095:0] i;
+logic [4095:0] q;
+logic [12:0] acq_counter;
+logic acq_count_full;
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
     begin
-        i <= 1023'b0;
-        q <= 1023'b0;
-        acq_counter <= 10'b0;
+        i <= 4095'b0;
+        q <= 4095'b0;
+        acq_counter <= 12'b0;
     end
     else
     begin
-        if (current_state == ACQUISITION)
+        if (current_state == CORRECT_SAMPLE)
         begin
             if (rise_ad_clk)
             begin
-                i <= {i[1021:1], i_sample};
-                q <= {i[1021:1], q_sample};
-                acq_counter <= acq_counter + 1'b1;
+                i[acq_counter] <= i_sample;
+                q[acq_counter] <= q_sample;
+                {acq_count_full, acq_counter} <= acq_counter + 1'b1;
             end
         end
         else if (current_state == DONE)
         begin
-            i <= 1023'b0;
-            q <= 1023'b0;
-            acq_counter <= 10'b0;
+            acq_counter <= 12'b0;
         end
     end
 end
+
+code_phase_to_lfsr lfsr
+(
+    .clk(clk),
+    .rst(rst),
+    .phase(code_phase),
+    .g1(w_g1),
+    .g2(w_g2)
+);
+
+logic [9:0] code_phase;
+logic [8:0] code_nco_phase;
+logic [9:0] corr_counter;
+
+logic [9:0] w_g1;
+logic [9:0] w_g2;
 
 logic [10:1] g1;
 logic [10:1] g2;
@@ -150,21 +190,42 @@ logic [11:0] integrator_9;
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
-	begin
-		integrator_counter <= 12'b0;
-		integrator_0 <= 12'b0;
-		integrator_1 <= 12'b0;
-		integrator_2 <= 12'b0;
-		integrator_3 <= 12'b0;
-		integrator_4 <= 12'b0;
-		integrator_5 <= 12'b0;
-		integrator_6 <= 12'b0;
-		integrator_7 <= 12'b0;
-		integrator_8 <= 12'b0;
-		integrator_9 <= 12'b0;
-		g1 <= 10'b11_1111_1111;
-		g2 <= 10'b11_1111_1111;
-	end
+    begin
+        integrator_counter <= 12'b0;
+        integrator_0 <= 12'b0;
+        integrator_1 <= 12'b0;
+        g1 <= 10'b11_1111_1111;
+        g2 <= 10'b11_1111_1111;
+        code_phase <= 10'b0;
+        code_nco_phase <= 9'b0;
+    end
+    else
+    begin
+        if (current_state == CORRECT_SAMPLE && current_state == DONE)
+        begin
+            integrator_counter <= 12'b0;
+            integrator_0 <= 12'b0;
+            integrator_1 <= 12'b0;
+            g1 <= 10'b11_1111_1111;
+            g2 <= 10'b11_1111_1111;
+            code_phase <= 10'b0;
+            code_nco_phase <= 9'b0;
+        end
+        else if (current_state == ACQ_INIT)
+        begin
+            g1 <= w_g1;
+            g2 <= w_g2;
+            code_phase <= code_phase + 1'b1;
+        end
+        else if (current_state == CORR)
+        begin
+            integrator_0 <= integrator_0 + corr(
+
+            
+
+
+
+
 end
 
 
