@@ -1,5 +1,5 @@
 NAME = test.vcd
-SRCS = ./gps_ack.sv
+SRCS = ./tb_gps_ack.sv ./gps_ack.sv ./code_phase_to_lfsr.sv
 OBJS = a.out
 
 $(OBJS): $(SRCS)
