@@ -6,11 +6,13 @@ module gps_ack
 (
     input wire clk,
     input wire rst,
-    input logic ack_start,
+    input wire ack_start,
     input wire adc_clk,
     input wire i_sample,
     input wire q_sample,
-    input logic [4:0] sat0,
+	output logic corr_complete,
+	output logic [9:0] code_phase,
+    input wire [4:0] sat0,
     output logic [11:0] integrator_0
 
     // input wire [5:0] satelite,
@@ -94,7 +96,7 @@ state_t current_state, next_state;
 
 always_ff @(posedge clk or negedge rst)
 begin
-    if (!rst) current_state <= CORRECT_SAMPLE;
+    if (!rst) current_state <= HOLD;
     else current_state <= next_state;
 end
 
@@ -109,26 +111,31 @@ begin
 
     CORRECT_SAMPLE:
     begin
-        if (acq_count_full == 4095)
+        if (acq_counter <= 4095)
         begin
-            next_state = ACQ_INIT;
+            next_state = CORRECT_SAMPLE;
         end
         else
         begin
-            next_state = CORR;
+            next_state = ACQ_INIT;
         end
     end
 
     ACQ_INIT: next_state = CORR;
 
     CORR:
+	begin
         if (integrator_counter < 4095) next_state = CORR;
         else next_state = ACQ_END;
+	end
 
-    ACQ_END:;
-
-    DONE:;
-    default: next_state = CORRECT_SAMPLE;
+    ACQ_END:
+	begin
+		if (code_phase <= 10'd1023) next_state = ACQ_INIT;
+		else next_state = DONE;
+	end
+    DONE: next_state = HOLD;
+    default: next_state = HOLD;
     endcase
 end
 
@@ -152,7 +159,7 @@ begin
     begin
         i <= 4095'b0;
         q <= 4095'b0;
-        acq_counter <= 12'b0;
+        acq_counter <= 13'b0;
     end
     else
     begin
@@ -172,10 +179,9 @@ begin
     end
 end
 
-logic [9:0] code_phase;
+// logic [9:0] code_phase;
 logic [8:0] code_nco_phase;
 logic car_code_nco;
-logic [9:0] corr_counter;
 
 logic [9:0] w_g1;
 logic [9:0] w_g2;
@@ -203,6 +209,7 @@ logic lo_q;
 
 logic [11:0] integrator_counter;
 //logic [11:0] integrator_0;
+//assign integrator = integrator_0;
 
 //logic [7:0] sat0;
 /*logic [11:0] integrator_1;
@@ -225,6 +232,11 @@ begin
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
         code_nco_phase <= 9'b0;
+        doppler_phase <= 16'b0;
+        doppler_omega <= 16'b0;
+        lo_i <= 1'b0;
+        lo_q <= 1'b0;
+		corr_complete <= 1'b0;
     end
     else
     begin
@@ -236,21 +248,29 @@ begin
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
             code_nco_phase <= 9'b0;
+            doppler_phase <= 16'b0;
+            doppler_omega <= 16'b0;
         end
 
         else if (current_state == ACQ_INIT)
         begin
+            integrator_counter <= 12'b0;
+            integrator_0 <= 12'b0;
             g1 <= w_g1;
             g2 <= w_g2;
             code_phase <= code_phase + 1'b1;
             code_nco_phase <= 9'b0;
+            doppler_phase <= 16'b0;
+            doppler_omega <= 16'b0;
+			corr_complete <= 1'b0;
         end
 
         else if (current_state == CORR)
         begin
             integrator_counter <= integrator_counter + 12'b1;
             integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], lo_i);
-            {car_code_nco, code_nco_phase} = code_nco_phase + CORRECT_SAMPLE;
+
+            {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
             begin
                 g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
@@ -260,13 +280,19 @@ begin
             {car_doppler_nco, doppler_phase} = doppler_phase + doppler_omega;
             if (car_doppler_nco)
             begin
-                lo_i = LO_SIN[doppler_phase[15:14]];
-                lo_q = LO_COS[doppler_phase[15:14]];
+                lo_i <= LO_SIN[doppler_phase[15:14]];
+                lo_q <= LO_COS[doppler_phase[15:14]];
             end
         end
 
-        else if (current_state == ACQ_END);
-        else if (current_state == DONE);
+        else if (current_state == ACQ_END)
+		begin
+			corr_complete <= 1'b1;
+		end
+        else if (current_state == DONE)
+		begin
+			corr_complete <= 1'b0;
+		end
     end
 end
 
