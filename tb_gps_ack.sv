@@ -14,10 +14,10 @@ logic [1:0] _q_sample;
 logic i;
 logic q;
 
-logic [4:0] sat0;
-logic [4:0] sat1;
-logic [4:0] sat2;
-logic [4:0] sat3;
+logic [5:0] sat0;
+logic [5:0] sat1;
+logic [5:0] sat2;
+logic [5:0] sat3;
 logic [11:0] integrator_0;
 logic [11:0] integrator_1;
 logic [11:0] integrator_2;
@@ -33,8 +33,8 @@ gps_ack uut
     .adc_clk(adc_clk),
     .i_sample(i),
     .q_sample(q),
-	.code_phase(code_phase),
-	.corr_complete(corr_complete),
+    .code_phase(code_phase),
+    .corr_complete(corr_complete),
     .sat0(sat0),
     .sat1(sat1),
     .sat2(sat2),
@@ -84,13 +84,13 @@ begin
 fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
 repeat (8192) @(posedge clk)
 begin
-	adc_clk = 1'b0;
-	@(posedge clk);
-	rnum = $fread(tmp, fd);
-	{_q_sample, _i_sample, q_sample, i_sample} = tmp[3:0];
-	i = i_sample[1];
-	q = q_sample[1];
-	adc_clk= 1'b1;
+    adc_clk = 1'b0;
+    @(posedge clk);
+    rnum = $fread(tmp, fd);
+    {_q_sample, _i_sample, q_sample, i_sample} = tmp[3:0];
+    i = i_sample[1];
+    q = q_sample[1];
+    adc_clk= 1'b1;
 end
 end
 
@@ -98,18 +98,18 @@ integer fd2;
 integer rnum2;
 initial
 begin
-	fd2 = $fopen("./corr.dat", "w");
-	forever @(posedge corr_complete)
-	begin
-		$display("%d, %d, %d", sat0, code_phase, integrator_0);
-		$display("%d, %d, %d", sat1, code_phase, integrator_1);
-		$display("%d, %d, %d", sat2, code_phase, integrator_2);
-		$display("%d, %d, %d", sat3, code_phase, integrator_3);
-		$fwrite(fd2, "%d, %d, %d\n", sat0, code_phase, integrator_0);
-		$fwrite(fd2, "%d, %d, %d\n", sat1, code_phase, integrator_1);
-		$fwrite(fd2, "%d, %d, %d\n", sat2, code_phase, integrator_2);
-		$fwrite(fd2, "%d, %d, %d\n", sat3, code_phase, integrator_3);
-	end
+    fd2 = $fopen("./corr.dat", "w");
+    forever @(posedge corr_complete)
+    begin
+        $display("%d, %d, %d", sat0, code_phase, integrator_0);
+        $display("%d, %d, %d", sat1, code_phase, integrator_1);
+        $display("%d, %d, %d", sat2, code_phase, integrator_2);
+        $display("%d, %d, %d", sat3, code_phase, integrator_3);
+        $fwrite(fd2, "%d, %d, %d\n", sat0, code_phase, integrator_0);
+        $fwrite(fd2, "%d, %d, %d\n", sat1, code_phase, integrator_1);
+        $fwrite(fd2, "%d, %d, %d\n", sat2, code_phase, integrator_2);
+        $fwrite(fd2, "%d, %d, %d\n", sat3, code_phase, integrator_3);
+    end
 end
 
 endmodule
