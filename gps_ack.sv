@@ -12,10 +12,10 @@ module gps_ack
     input wire q_sample,
     output logic corr_complete,
     output logic [9:0] code_phase,
-    output logic [4:0] sat0,
-    output logic [4:0] sat1,
-    output logic [4:0] sat2,
-    output logic [4:0] sat3,
+    output logic [5:0] sat0,
+    output logic [5:0] sat1,
+    output logic [5:0] sat2,
+    output logic [5:0] sat3,
     output logic [11:0] integrator_0,
     output logic [11:0] integrator_1,
     output logic [11:0] integrator_2,
@@ -251,10 +251,10 @@ begin
             integrator_1 <= 12'b0;
             integrator_2 <= 12'b0;
             integrator_3 <= 12'b0;
-            sat0 <= 5'd1;
-            sat1 <= 5'd2;
-            sat2 <= 5'd3;
-            sat3 <= 5'd4;
+            sat0 <= 6'd1;
+            sat1 <= 6'd2;
+            sat2 <= 6'd3;
+            sat3 <= 6'd4;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
@@ -310,10 +310,10 @@ begin
         else if (current_state == SAT_SET)
         begin
             sat_counter <= sat_counter + 1'b1;
-            sat0 <= sat0 + 4'd4;
-            sat1 <= sat1 + 4'd4;
-            sat2 <= sat2 + 4'd4;
-            sat3 <= sat3 + 4'd4;
+            sat0 <= sat0 + 6'd4;
+            sat1 <= sat1 + 6'd4;
+            sat2 <= sat2 + 6'd4;
+            sat3 <= sat3 + 6'd4;
         end
         else if (current_state == DONE)
         begin

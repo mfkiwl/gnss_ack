@@ -69,7 +69,7 @@ ack_start = 1'b1;
 #20;
 ack_start = 1'b0;
 
-repeat (25000000) @(posedge clk);
+repeat (40000000) @(posedge clk);
 
 $finish;
 end
