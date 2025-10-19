@@ -12,13 +12,14 @@ module gps_ack
     input wire q_sample,
     output logic corr_complete,
     output logic [9:0] code_phase,
-    input wire [4:0] sat0,
-    output logic [11:0] integrator_0
-
-    // input wire [5:0] satelite,
-    // input wire [9:0] chip_delay,
-    // input wire [31:0] doppler,
-    // output wire [15:0] integrator
+    output logic [4:0] sat0,
+    output logic [4:0] sat1,
+    output logic [4:0] sat2,
+    output logic [4:0] sat3,
+    output logic [11:0] integrator_0,
+    output logic [11:0] integrator_1,
+    output logic [11:0] integrator_2,
+    output logic [11:0] integrator_3
 );
 
 function [7:0] tap;
@@ -89,6 +90,7 @@ typedef enum logic [3:0]
     ACQ_INIT,
     CORR,
     ACQ_END,
+    SAT_SET,
     DONE
 } state_t;
 
@@ -132,6 +134,12 @@ begin
     ACQ_END:
     begin
         if (code_phase < 10'd1023) next_state = ACQ_INIT;
+        else next_state = SAT_SET;
+    end
+
+    SAT_SET:
+    begin
+        if (sat_counter < 3'd7) next_state = ACQ_INIT;
         else next_state = DONE;
     end
     DONE: next_state = HOLD;
@@ -208,19 +216,7 @@ logic lo_i;
 logic lo_q;
 
 logic [11:0] integrator_counter;
-//logic [11:0] integrator_0;
-//assign integrator = integrator_0;
-
-//logic [7:0] sat0;
-/*logic [11:0] integrator_1;
-logic [11:0] integrator_2;
-logic [11:0] integrator_3;
-logic [11:0] integrator_4;
-logic [11:0] integrator_5;
-logic [11:0] integrator_6;
-logic [11:0] integrator_7;
-logic [11:0] integrator_8;
-logic [11:0] integrator_9;*/
+logic [2:0] sat_counter;
 
 always_ff @(posedge clk or negedge rst)
 begin
@@ -228,6 +224,13 @@ begin
     begin
         integrator_counter <= 12'b0;
         integrator_0 <= 12'b0;
+        integrator_1 <= 12'b0;
+        integrator_2 <= 12'b0;
+        integrator_3 <= 12'b0;
+		sat0 <= 5'd1;
+		sat1 <= 5'd2;
+		sat2 <= 5'd3;
+		sat3 <= 5'd4;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
@@ -237,6 +240,7 @@ begin
         lo_i <= 1'b0;
         lo_q <= 1'b0;
         corr_complete <= 1'b0;
+        sat_counter <= 3'd0;
     end
     else
     begin
@@ -244,21 +248,31 @@ begin
         begin
             integrator_counter <= 12'b0;
             integrator_0 <= 12'b0;
+            integrator_1 <= 12'b0;
+            integrator_2 <= 12'b0;
+            integrator_3 <= 12'b0;
+            sat0 <= 5'd1;
+            sat1 <= 5'd2;
+            sat2 <= 5'd3;
+            sat3 <= 5'd4;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
             code_nco_phase <= 9'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
+            sat_counter <= 3'd0;
         end
 
         else if (current_state == ACQ_INIT)
         begin
             integrator_counter <= 12'b0;
             integrator_0 <= 12'b0;
+            integrator_1 <= 12'b0;
+            integrator_2 <= 12'b0;
+            integrator_3 <= 12'b0;
             g1 <= w_g1;
             g2 <= w_g2;
-            code_phase <= code_phase + 1'b1;
             code_nco_phase <= 9'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
@@ -269,6 +283,9 @@ begin
         begin
             integrator_counter <= integrator_counter + 12'b1;
             integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], lo_i);
+            integrator_1 <= integrator_1 + corr(tap(sat1), g1, g2, i[integrator_counter], lo_i);
+            integrator_2 <= integrator_2 + corr(tap(sat2), g1, g2, i[integrator_counter], lo_i);
+            integrator_3 <= integrator_3 + corr(tap(sat3), g1, g2, i[integrator_counter], lo_i);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
@@ -288,6 +305,15 @@ begin
         else if (current_state == ACQ_END)
         begin
             corr_complete <= 1'b1;
+            code_phase <= code_phase + 1'b1;
+        end
+        else if (current_state == SAT_SET)
+        begin
+            sat_counter <= sat_counter + 1'b1;
+            sat0 <= sat0 + 4'd4;
+            sat1 <= sat1 + 4'd4;
+            sat2 <= sat2 + 4'd4;
+            sat3 <= sat3 + 4'd4;
         end
         else if (current_state == DONE)
         begin

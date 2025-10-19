@@ -1,9 +1,5 @@
 module tb;
 
-integer fd;
-integer num;
-integer rnum;
-logic [7:0] tmp;
 
 logic clk;
 logic rst;
@@ -19,7 +15,13 @@ logic i;
 logic q;
 
 logic [4:0] sat0;
+logic [4:0] sat1;
+logic [4:0] sat2;
+logic [4:0] sat3;
 logic [11:0] integrator_0;
+logic [11:0] integrator_1;
+logic [11:0] integrator_2;
+logic [11:0] integrator_3;
 logic corr_complete;
 logic [9:0] code_phase;
 
@@ -34,17 +36,25 @@ gps_ack uut
 	.code_phase(code_phase),
 	.corr_complete(corr_complete),
     .sat0(sat0),
-    .integrator_0(integrator_0)
+    .sat1(sat1),
+    .sat2(sat2),
+    .sat3(sat3),
+    .integrator_0(integrator_0),
+    .integrator_1(integrator_1),
+    .integrator_2(integrator_2),
+    .integrator_3(integrator_3)
 );
 
 always #10 clk = ~clk;
 
 initial
 begin
+/*
 $dumpfile("test.vcd");
 $dumpvars(2, tb);
 $dumpall;
 $dumpon;
+*/
 
 #3;
 rst = 1'b1;
@@ -55,14 +65,19 @@ rst = 1'b0;
 #20
 rst = 1'b1;
 #35;
-sat0 = 5'd4;
 ack_start = 1'b1;
 #20;
 ack_start = 1'b0;
 
-repeat (5000000) @(posedge clk);
+repeat (25000000) @(posedge clk);
+
 $finish;
 end
+
+integer fd;
+integer num;
+integer rnum;
+logic [7:0] tmp;
 
 initial
 begin
@@ -79,13 +94,23 @@ begin
 end
 end
 
+integer fd2;
+integer rnum2;
 initial
 begin
-	forever @(posedge corr_complete) $display("%d, %d, %d", sat0, code_phase, integrator_0);
+	fd2 = $fopen("./corr.dat", "w");
+	forever @(posedge corr_complete)
+	begin
+		$display("%d, %d, %d", sat0, code_phase, integrator_0);
+		$display("%d, %d, %d", sat1, code_phase, integrator_1);
+		$display("%d, %d, %d", sat2, code_phase, integrator_2);
+		$display("%d, %d, %d", sat3, code_phase, integrator_3);
+		$fwrite(fd2, "%d, %d, %d\n", sat0, code_phase, integrator_0);
+		$fwrite(fd2, "%d, %d, %d\n", sat1, code_phase, integrator_1);
+		$fwrite(fd2, "%d, %d, %d\n", sat2, code_phase, integrator_2);
+		$fwrite(fd2, "%d, %d, %d\n", sat3, code_phase, integrator_3);
+	end
 end
-
-
-
 
 endmodule
 
