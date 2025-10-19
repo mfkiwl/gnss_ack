@@ -10,8 +10,8 @@ module gps_ack
     input wire adc_clk,
     input wire i_sample,
     input wire q_sample,
-	output logic corr_complete,
-	output logic [9:0] code_phase,
+    output logic corr_complete,
+    output logic [9:0] code_phase,
     input wire [4:0] sat0,
     output logic [11:0] integrator_0
 
@@ -124,16 +124,16 @@ begin
     ACQ_INIT: next_state = CORR;
 
     CORR:
-	begin
+    begin
         if (integrator_counter < 4095) next_state = CORR;
         else next_state = ACQ_END;
-	end
+    end
 
     ACQ_END:
-	begin
-		if (code_phase <= 10'd1023) next_state = ACQ_INIT;
-		else next_state = DONE;
-	end
+    begin
+        if (code_phase < 10'd1023) next_state = ACQ_INIT;
+        else next_state = DONE;
+    end
     DONE: next_state = HOLD;
     default: next_state = HOLD;
     endcase
@@ -236,7 +236,7 @@ begin
         doppler_omega <= 16'b0;
         lo_i <= 1'b0;
         lo_q <= 1'b0;
-		corr_complete <= 1'b0;
+        corr_complete <= 1'b0;
     end
     else
     begin
@@ -262,7 +262,7 @@ begin
             code_nco_phase <= 9'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
-			corr_complete <= 1'b0;
+            corr_complete <= 1'b0;
         end
 
         else if (current_state == CORR)
@@ -286,13 +286,13 @@ begin
         end
 
         else if (current_state == ACQ_END)
-		begin
-			corr_complete <= 1'b1;
-		end
+        begin
+            corr_complete <= 1'b1;
+        end
         else if (current_state == DONE)
-		begin
-			corr_complete <= 1'b0;
-		end
+        begin
+            corr_complete <= 1'b0;
+        end
     end
 end
 

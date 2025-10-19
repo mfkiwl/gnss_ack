@@ -55,7 +55,7 @@ rst = 1'b0;
 #20
 rst = 1'b1;
 #35;
-sat0 = 5'b1;
+sat0 = 5'd4;
 ack_start = 1'b1;
 #20;
 ack_start = 1'b0;
@@ -81,7 +81,7 @@ end
 
 initial
 begin
-	forever @(posedge corr_complete) $display("%d, %d", code_phase, integrator_0);
+	forever @(posedge corr_complete) $display("%d, %d, %d", sat0, code_phase, integrator_0);
 end
 
 
