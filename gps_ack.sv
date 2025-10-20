@@ -1,7 +1,10 @@
 module gps_ack
 #(
     parameter SAMPLE_BITS = 12, // 4096サンプル
-    parameter CODE_NCO_OMEGA = 131 // 4Msps
+    parameter CODE_NCO_OMEGA = 131, // 4Msps
+    parameter DOPPLER_STEP = 13, //
+    parameter DOPPLER_INIT = 13, //
+    parameter DOPPLER_NUM = 2
 )
 (
     input wire clk,
@@ -12,6 +15,7 @@ module gps_ack
     input wire q_sample,
     output logic corr_complete,
     output logic [9:0] code_phase,
+    output logic signed [15:0] doppler_omega,
     output logic [5:0] sat0,
     output logic [5:0] sat1,
     output logic [5:0] sat2,
@@ -19,7 +23,8 @@ module gps_ack
     output logic [11:0] integrator_0,
     output logic [11:0] integrator_1,
     output logic [11:0] integrator_2,
-    output logic [11:0] integrator_3
+    output logic [11:0] integrator_3,
+    output logic search_complete
 );
 
 function [7:0] tap;
@@ -89,7 +94,9 @@ typedef enum logic [3:0]
     CORRECT_SAMPLE,
     ACQ_INIT,
     CORR,
+    CORR_COMPLETE,
     ACQ_END,
+    DOPPLER_SET,
     SAT_SET,
     DONE
 } state_t;
@@ -128,12 +135,20 @@ begin
     CORR:
     begin
         if (integrator_counter < 4095) next_state = CORR;
-        else next_state = ACQ_END;
+        else next_state = CORR_COMPLETE;
     end
+
+    CORR_COMPLETE: next_state = ACQ_END;
 
     ACQ_END:
     begin
         if (code_phase < 10'd1023) next_state = ACQ_INIT;
+        else next_state = DOPPLER_SET;
+    end
+
+    DOPPLER_SET:
+    begin
+        if (doppler_counter < DOPPLER_NUM) next_state = ACQ_INIT;
         else next_state = SAT_SET;
     end
 
@@ -209,8 +224,8 @@ code_phase_to_lfsr lfsr
 localparam LO_SIN = 4'b1100;
 localparam LO_COS = 4'b0110;
 logic signed [15:0] doppler_phase;
-logic signed [15:0] doppler_omega;
 logic car_doppler_nco;
+logic [7:0] doppler_counter;
 
 logic lo_i;
 logic lo_q;
@@ -240,11 +255,13 @@ begin
         lo_i <= 1'b0;
         lo_q <= 1'b0;
         corr_complete <= 1'b0;
+        search_complete <= 1'b0;
         sat_counter <= 3'd0;
+        doppler_counter <= 8'b0;
     end
     else
     begin
-        if (current_state == CORRECT_SAMPLE && current_state == DONE)
+        if (current_state == HOLD)
         begin
             integrator_counter <= 12'b0;
             integrator_0 <= 12'b0;
@@ -262,6 +279,32 @@ begin
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
             sat_counter <= 3'd0;
+            corr_complete <= 1'b0;
+            search_complete <= 1'b0;
+            doppler_counter <= 8'b0;
+        end
+
+        else if (current_state == CORRECT_SAMPLE)
+        begin
+            integrator_counter <= 12'b0;
+            integrator_0 <= 12'b0;
+            integrator_1 <= 12'b0;
+            integrator_2 <= 12'b0;
+            integrator_3 <= 12'b0;
+            sat0 <= 6'd1;
+            sat1 <= 6'd2;
+            sat2 <= 6'd3;
+            sat3 <= 6'd4;
+            g1 <= 10'b11_1111_1111;
+            g2 <= 10'b11_1111_1111;
+            code_phase <= 10'b0;
+            code_nco_phase <= 9'b0;
+            doppler_phase <= 16'b0;
+            doppler_omega <= DOPPLER_INIT;
+            sat_counter <= 3'd0;
+            corr_complete <= 1'b0;
+            search_complete <= 1'b0;
+            doppler_counter <= 8'b0;
         end
 
         else if (current_state == ACQ_INIT)
@@ -275,8 +318,8 @@ begin
             g2 <= w_g2;
             code_nco_phase <= 9'b0;
             doppler_phase <= 16'b0;
-            doppler_omega <= 16'b0;
             corr_complete <= 1'b0;
+            search_complete <= 1'b0;
         end
 
         else if (current_state == CORR)
@@ -302,11 +345,24 @@ begin
             end
         end
 
-        else if (current_state == ACQ_END)
+        else if (current_state == CORR_COMPLETE)
         begin
             corr_complete <= 1'b1;
+        end
+
+        else if (current_state == ACQ_END)
+        begin
             code_phase <= code_phase + 1'b1;
         end
+
+        else if (current_state == DOPPLER_SET)
+        begin
+            code_phase <= 10'b0;
+            doppler_phase <= 16'b0;
+            doppler_omega <= doppler_omega + DOPPLER_STEP;
+            doppler_counter <= doppler_counter + 1'b1;
+        end
+
         else if (current_state == SAT_SET)
         begin
             sat_counter <= sat_counter + 1'b1;
@@ -314,10 +370,13 @@ begin
             sat1 <= sat1 + 6'd4;
             sat2 <= sat2 + 6'd4;
             sat3 <= sat3 + 6'd4;
+            doppler_counter <= 8'b0;
+            doppler_omega <= DOPPLER_INIT;
         end
         else if (current_state == DONE)
         begin
             corr_complete <= 1'b0;
+            search_complete <= 1'b1;
         end
     end
 end

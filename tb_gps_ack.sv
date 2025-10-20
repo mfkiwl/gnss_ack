@@ -23,7 +23,9 @@ logic [11:0] integrator_1;
 logic [11:0] integrator_2;
 logic [11:0] integrator_3;
 logic corr_complete;
+logic search_complete;
 logic [9:0] code_phase;
+logic signed [15:0] doppler_omega;
 
 gps_ack uut
 (
@@ -34,6 +36,7 @@ gps_ack uut
     .i_sample(i),
     .q_sample(q),
     .code_phase(code_phase),
+	.doppler_omega(doppler_omega),
     .corr_complete(corr_complete),
     .sat0(sat0),
     .sat1(sat1),
@@ -42,19 +45,18 @@ gps_ack uut
     .integrator_0(integrator_0),
     .integrator_1(integrator_1),
     .integrator_2(integrator_2),
-    .integrator_3(integrator_3)
+    .integrator_3(integrator_3),
+	.search_complete(search_complete)
 );
 
 always #10 clk = ~clk;
 
 initial
 begin
-/*
 $dumpfile("test.vcd");
 $dumpvars(2, tb);
 $dumpall;
 $dumpon;
-*/
 
 #3;
 rst = 1'b1;
@@ -69,7 +71,8 @@ ack_start = 1'b1;
 #20;
 ack_start = 1'b0;
 
-repeat (40000000) @(posedge clk);
+//@(posedge search_complete);
+repeat (20000000) @(posedge clk);
 
 $finish;
 end
@@ -101,14 +104,14 @@ begin
     fd2 = $fopen("./corr.dat", "w");
     forever @(posedge corr_complete)
     begin
-        $display("%d, %d, %d", sat0, code_phase, integrator_0);
-        $display("%d, %d, %d", sat1, code_phase, integrator_1);
-        $display("%d, %d, %d", sat2, code_phase, integrator_2);
-        $display("%d, %d, %d", sat3, code_phase, integrator_3);
-        $fwrite(fd2, "%d, %d, %d\n", sat0, code_phase, integrator_0);
-        $fwrite(fd2, "%d, %d, %d\n", sat1, code_phase, integrator_1);
-        $fwrite(fd2, "%d, %d, %d\n", sat2, code_phase, integrator_2);
-        $fwrite(fd2, "%d, %d, %d\n", sat3, code_phase, integrator_3);
+        $display("%d, %d, %d, %d", sat0, code_phase, doppler_omega, integrator_0);
+        $display("%d, %d, %d, %d", sat1, code_phase, doppler_omega, integrator_1);
+        $display("%d, %d, %d, %d", sat2, code_phase, doppler_omega, integrator_2);
+        $display("%d, %d, %d, %d", sat3, code_phase, doppler_omega, integrator_3);
+        $fwrite(fd2, "%d, %d, %d, %d\n", sat0, code_phase, doppler_omega, integrator_0);
+        $fwrite(fd2, "%d, %d, %d, %d\n", sat1, code_phase, doppler_omega, integrator_1);
+        $fwrite(fd2, "%d, %d, %d, %d\n", sat2, code_phase, doppler_omega, integrator_2);
+        $fwrite(fd2, "%d, %d, %d, %d\n", sat3, code_phase, doppler_omega, integrator_3);
     end
 end
 
