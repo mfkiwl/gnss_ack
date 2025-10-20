@@ -69,7 +69,7 @@ function cacode;
     input [3:0] t1;
     input [3:0] t2;
 
-    cacode = g1[10] ^ g2[t1] ^ g2[t1];
+    cacode = g1[10] ^ g2[t1] ^ g2[t2];
 endfunction
 
 function corr;
