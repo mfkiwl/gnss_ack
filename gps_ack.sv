@@ -227,10 +227,10 @@ begin
         integrator_1 <= 12'b0;
         integrator_2 <= 12'b0;
         integrator_3 <= 12'b0;
-		sat0 <= 6'd1;
-		sat1 <= 6'd2;
-		sat2 <= 6'd3;
-		sat3 <= 6'd4;
+        sat0 <= 6'd1;
+        sat1 <= 6'd2;
+        sat2 <= 6'd3;
+        sat3 <= 6'd4;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
