@@ -20,10 +20,18 @@ module gps_ack
     output logic [5:0] sat1,
     output logic [5:0] sat2,
     output logic [5:0] sat3,
+    output logic [5:0] sat4,
+    output logic [5:0] sat5,
+    output logic [5:0] sat6,
+    output logic [5:0] sat7,
     output logic [11:0] integrator_0,
     output logic [11:0] integrator_1,
     output logic [11:0] integrator_2,
     output logic [11:0] integrator_3,
+    output logic [11:0] integrator_4,
+    output logic [11:0] integrator_5,
+    output logic [11:0] integrator_6,
+    output logic [11:0] integrator_7,
     output logic search_complete
 );
 
@@ -154,7 +162,7 @@ begin
 
     SAT_SET:
     begin
-        if (sat_counter < 3'd7) next_state = ACQ_INIT;
+        if (sat_counter < 3'd3) next_state = ACQ_INIT;
         else next_state = DONE;
     end
     DONE: next_state = HOLD;
@@ -242,10 +250,18 @@ begin
         integrator_1 <= 12'b0;
         integrator_2 <= 12'b0;
         integrator_3 <= 12'b0;
+        integrator_4 <= 12'b0;
+        integrator_5 <= 12'b0;
+        integrator_6 <= 12'b0;
+        integrator_7 <= 12'b0;
         sat0 <= 6'd1;
         sat1 <= 6'd2;
         sat2 <= 6'd3;
         sat3 <= 6'd4;
+        sat4 <= 6'd1;
+        sat5 <= 6'd2;
+        sat6 <= 6'd3;
+        sat7 <= 6'd4;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
@@ -268,10 +284,18 @@ begin
             integrator_1 <= 12'b0;
             integrator_2 <= 12'b0;
             integrator_3 <= 12'b0;
+            integrator_4 <= 12'b0;
+            integrator_5 <= 12'b0;
+            integrator_6 <= 12'b0;
+            integrator_7 <= 12'b0;
             sat0 <= 6'd1;
             sat1 <= 6'd2;
             sat2 <= 6'd3;
             sat3 <= 6'd4;
+            sat4 <= 6'd5;
+            sat5 <= 6'd6;
+            sat6 <= 6'd7;
+            sat7 <= 6'd8;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
@@ -291,10 +315,18 @@ begin
             integrator_1 <= 12'b0;
             integrator_2 <= 12'b0;
             integrator_3 <= 12'b0;
+            integrator_4 <= 12'b0;
+            integrator_5 <= 12'b0;
+            integrator_6 <= 12'b0;
+            integrator_7 <= 12'b0;
             sat0 <= 6'd1;
             sat1 <= 6'd2;
             sat2 <= 6'd3;
             sat3 <= 6'd4;
+            sat4 <= 6'd5;
+            sat5 <= 6'd6;
+            sat6 <= 6'd7;
+            sat7 <= 6'd8;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
@@ -314,6 +346,10 @@ begin
             integrator_1 <= 12'b0;
             integrator_2 <= 12'b0;
             integrator_3 <= 12'b0;
+            integrator_4 <= 12'b0;
+            integrator_5 <= 12'b0;
+            integrator_6 <= 12'b0;
+            integrator_7 <= 12'b0;
             g1 <= w_g1;
             g2 <= w_g2;
             code_nco_phase <= 9'b0;
@@ -329,6 +365,10 @@ begin
             integrator_1 <= integrator_1 + corr(tap(sat1), g1, g2, i[integrator_counter], lo_i);
             integrator_2 <= integrator_2 + corr(tap(sat2), g1, g2, i[integrator_counter], lo_i);
             integrator_3 <= integrator_3 + corr(tap(sat3), g1, g2, i[integrator_counter], lo_i);
+            integrator_4 <= integrator_4 + corr(tap(sat4), g1, g2, i[integrator_counter], lo_i);
+            integrator_5 <= integrator_5 + corr(tap(sat5), g1, g2, i[integrator_counter], lo_i);
+            integrator_6 <= integrator_6 + corr(tap(sat6), g1, g2, i[integrator_counter], lo_i);
+            integrator_7 <= integrator_7 + corr(tap(sat7), g1, g2, i[integrator_counter], lo_i);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
@@ -366,10 +406,14 @@ begin
         else if (current_state == SAT_SET)
         begin
             sat_counter <= sat_counter + 1'b1;
-            sat0 <= sat0 + 6'd4;
-            sat1 <= sat1 + 6'd4;
-            sat2 <= sat2 + 6'd4;
-            sat3 <= sat3 + 6'd4;
+            sat0 <= sat0 + 6'd8;
+            sat1 <= sat1 + 6'd8;
+            sat2 <= sat2 + 6'd8;
+            sat3 <= sat3 + 6'd8;
+            sat4 <= sat0 + 6'd8;
+            sat5 <= sat0 + 6'd8;
+            sat6 <= sat0 + 6'd8;
+            sat7 <= sat0 + 6'd8;
             doppler_counter <= 8'b0;
             doppler_omega <= DOPPLER_INIT;
         end
