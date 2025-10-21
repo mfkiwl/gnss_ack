@@ -23,9 +23,9 @@ for n in range(1,33):
 #	print(sat1)
 	#print(corr_data[sat1, 1])
 	#print(corr_data[sat1, 2])
-	max_index = np.argmax(corr_data[sat1, 3])
-	print("Index: {0:d}".format(max_index))
-	print("Corr: {0:d}".format(corr_data[sat1, 3][max_index]))
+	min_index = np.argmin(corr_data[sat1, 3])
+	print("Index: {0:d}".format(min_index))
+	print("Corr: {0:d}".format(corr_data[sat1, 3][min_index]))
 
 #	plt.plot(corr_data[sat1, 1], corr_data[sat1, 3])
 #	plt.show()
