@@ -410,10 +410,10 @@ begin
             sat1 <= sat1 + 6'd8;
             sat2 <= sat2 + 6'd8;
             sat3 <= sat3 + 6'd8;
-            sat4 <= sat0 + 6'd8;
-            sat5 <= sat0 + 6'd8;
-            sat6 <= sat0 + 6'd8;
-            sat7 <= sat0 + 6'd8;
+            sat4 <= sat4 + 6'd8;
+            sat5 <= sat5 + 6'd8;
+            sat6 <= sat6 + 6'd8;
+            sat7 <= sat7 + 6'd8;
             doppler_counter <= 8'b0;
             doppler_omega <= DOPPLER_INIT;
         end

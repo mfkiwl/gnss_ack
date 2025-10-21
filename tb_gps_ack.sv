@@ -35,7 +35,13 @@ logic search_complete;
 logic [9:0] code_phase;
 logic signed [15:0] doppler_omega;
 
-gps_ack uut
+gps_ack
+#(
+	.DOPPLER_STEP(33),
+	.DOPPLER_INIT(0),
+	.DOPPLER_NUM(10)
+)
+uut
 (
     .clk(clk),
     .rst(rst),
@@ -69,10 +75,12 @@ always #10 clk = ~clk;
 
 initial
 begin
+/*
 $dumpfile("test.vcd");
 $dumpvars(2, tb);
 $dumpall;
 $dumpon;
+*/
 
 #3;
 rst = 1'b1;
@@ -87,8 +95,8 @@ ack_start = 1'b1;
 #20;
 ack_start = 1'b0;
 
-//@(posedge search_complete);
-repeat (20000000) @(posedge clk);
+@(posedge search_complete);
+//repeat (20000000) @(posedge clk);
 
 $finish;
 end
