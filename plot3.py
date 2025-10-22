@@ -26,6 +26,8 @@ print("Sat: {0:d}".format(31))
 	#print(corr_data[sat1, 2])
 min_index = np.argmin(corr_data[sat1, 3])
 print("Index: {0:d}".format(min_index))
+print("phase: {0:d}".format(corr_data[sat1, 1][min_index]))
+print("frac: {0:d}".format(corr_data[sat1, 2][min_index]))
 print("Corr: {0:d}".format(corr_data[sat1, 3][min_index]))
 
 #	plt.plot(corr_data[sat1, 1], corr_data[sat1, 3])

@@ -1,7 +1,7 @@
 module gps_ack2
 #(
     parameter SAMPLE_BITS = 12, // 4096サンプル
-    parameter CODE_NCO_OMEGA = 131, // 4Msps
+    parameter CODE_NCO_OMEGA = 145, // 131 4Msps
     parameter DOPPLER_STEP = 13, //
     parameter DOPPLER_INIT = 13, //
     parameter DOPPLER_NUM = 2
@@ -138,7 +138,7 @@ begin
 
     CODE_NCO_SET:
     begin
-        if (code_nco_frac < 4'd5) next_state = ACQ_INIT;
+        if (code_nco_frac < 4'd4) next_state = ACQ_INIT;
         else next_state = CODE_PHASE_SET;
     end
 
@@ -235,6 +235,8 @@ logic lo_q;
 logic [11:0] integrator_counter;
 logic [2:0] sat_counter;
 
+logic [11:0] ca_code_counter;
+
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
@@ -245,7 +247,7 @@ begin
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
-		code_nco_frac <= 0;
+        code_nco_frac <= 0;
         code_nco_phase <= 9'b0;
         doppler_phase <= 16'b0;
         doppler_omega <= 16'b0;
@@ -255,6 +257,7 @@ begin
         search_complete <= 1'b0;
         sat_counter <= 3'd0;
         doppler_counter <= 8'b0;
+        ca_code_counter <= 12'b0;
     end
     else
     begin
@@ -266,7 +269,7 @@ begin
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
-			code_nco_frac <= 0;
+            code_nco_frac <= 0;
             code_nco_phase <= 9'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
@@ -274,6 +277,7 @@ begin
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
             doppler_counter <= 8'b0;
+            ca_code_counter <= 12'b0;
         end
 
         else if (current_state == CORRECT_SAMPLE)
@@ -284,7 +288,7 @@ begin
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
-			code_nco_frac <= 0;
+            code_nco_frac <= 0;
             code_nco_phase <= 9'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= DOPPLER_INIT;
@@ -292,6 +296,7 @@ begin
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
             doppler_counter <= 8'b0;
+            ca_code_counter <= 12'b0;
         end
 
         else if (current_state == ACQ_INIT)
@@ -303,19 +308,21 @@ begin
             doppler_phase <= 16'b0;
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
+            ca_code_counter <= 12'b0;
         end
 
         else if (current_state == CORR)
         begin
             integrator_counter <= integrator_counter + 12'b1;
             //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], lo_i);
-            integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b1);
+            integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b0);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
             begin
                 g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
                 g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
+                ca_code_counter <= ca_code_counter + 1'b1;
             end
 
             {car_doppler_nco, doppler_phase} = doppler_phase + doppler_omega;
@@ -333,7 +340,7 @@ begin
 
         else if (current_state == CODE_NCO_SET)
         begin
-			code_nco_frac <= code_nco_frac + 1'b1;
+            code_nco_frac <= code_nco_frac + 1'b1;
             if (code_nco_frac == 5'd0) code_nco_phase <= 9'd127;
             else if (code_nco_frac == 5'd1) code_nco_phase <= 9'd255;
             else if (code_nco_frac == 4'd2) code_nco_phase <= 9'd383;
