@@ -78,7 +78,7 @@ logic [11:0] integrator;
 
 logic [7:0] taps;
 
-assign taps = tap(6'd1);
+assign taps = tap(6'd31);
 
 code_phase_to_lfsr lfsr
 (
