@@ -24,9 +24,10 @@ logic signed [15:0] doppler_omega;
 
 gps_ack2
 #(
-	.DOPPLER_STEP(33),
+    .CODE_NCO_OMEGA(131), // 131 4Msps
+	.DOPPLER_STEP(8),
 	.DOPPLER_INIT(0),
-	.DOPPLER_NUM(0)
+	.DOPPLER_NUM(5)
 )
 uut
 (
@@ -49,10 +50,14 @@ always #10 clk = ~clk;
 
 initial
 begin
+
+/*
 $dumpfile("test.vcd");
 $dumpvars(2, tb);
 $dumpall;
 $dumpon;
+*/
+
 
 #3;
 rst = 1'b1;
@@ -76,7 +81,8 @@ end
 integer fd;
 integer num;
 integer rnum;
-logic [7:0] tmp;
+logic [7:0] tmp1;
+logic [7:0] tmp2;
 
 initial
 begin
@@ -92,10 +98,11 @@ repeat (8192) @(posedge clk)
 begin
     adc_clk = 1'b0;
     @(posedge clk);
-    rnum = $fread(tmp, fd);
-    {_q_sample, _i_sample, q_sample, i_sample} = tmp;
-    i = i_sample[1];
-    q = q_sample[1];
+    rnum = $fread(tmp1, fd);
+    rnum = $fread(tmp2, fd);
+
+    i = tmp1[1];
+    q = tmp2[1];
     adc_clk= 1'b1;
 end
 //$finish;

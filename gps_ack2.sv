@@ -1,7 +1,7 @@
 module gps_ack2
 #(
     parameter SAMPLE_BITS = 12, // 4096サンプル
-    parameter CODE_NCO_OMEGA = 145, // 131 4Msps
+    parameter CODE_NCO_OMEGA = 131, // 131 4Msps
     parameter DOPPLER_STEP = 13, //
     parameter DOPPLER_INIT = 13, //
     parameter DOPPLER_NUM = 2
@@ -88,6 +88,7 @@ typedef enum logic [3:0]
     HOLD,
     CORRECT_SAMPLE,
     ACQ_INIT,
+    CODE_SET_WAIT,
     CORR,
     CORR_COMPLETE,
     CODE_NCO_SET,
@@ -122,9 +123,11 @@ begin
         end
         else
         begin
-            next_state = ACQ_INIT;
+            next_state = CODE_SET_WAIT;
         end
     end
+
+    CODE_SET_WAIT: next_state = ACQ_INIT;
 
     ACQ_INIT: next_state = CORR;
 
@@ -138,20 +141,20 @@ begin
 
     CODE_NCO_SET:
     begin
-        if (code_nco_frac < 4'd4) next_state = ACQ_INIT;
+        if (code_nco_frac < 4'd4) next_state = CODE_SET_WAIT;
         else next_state = CODE_PHASE_SET;
     end
 
     CODE_PHASE_SET:
     begin
-        if (code_phase < 10'd1022) next_state = ACQ_INIT;
+        if (code_phase < 10'd1022) next_state = CODE_SET_WAIT;
         else next_state = DOPPLER_SET;
     end
 
     DOPPLER_SET:
     begin
-        //if (doppler_counter < DOPPLER_NUM) next_state = ACQ_INIT;
-        next_state = SAT_SET;//else next_state = SAT_SET;
+        if (doppler_counter < DOPPLER_NUM) next_state = CODE_SET_WAIT;
+        else next_state = SAT_SET;
     end
 
     SAT_SET:
@@ -314,8 +317,8 @@ begin
         else if (current_state == CORR)
         begin
             integrator_counter <= integrator_counter + 12'b1;
-            //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], lo_i);
-            integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b0);
+            integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], lo_i);
+            //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b1);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
