@@ -1,7 +1,7 @@
 module gps_ack2
 #(
     parameter SAMPLE_BITS = 12, // 4096サンプル
-    parameter CODE_NCO_OMEGA = 131, // 131 4Msps
+    parameter CODE_NCO_OMEGA = 67027, // 131 4Msps
     parameter DOPPLER_STEP = 13, //
     parameter DOPPLER_INIT = 13, //
     parameter DOPPLER_NUM = 2
@@ -18,7 +18,8 @@ module gps_ack2
     output logic [4:0] code_nco_frac,
     output logic signed [15:0] doppler_omega,
     output logic [5:0] sat0,
-    output logic [11:0] integrator_0,
+    output logic [11:0] integrator_i0,
+    output logic [11:0] integrator_q0,
     output logic search_complete
 );
 
@@ -79,7 +80,7 @@ function corr;
     input x;
     input bb;
 
-    corr = x ^ bb ^ cacode(g1, g2, sat_taps[7:4], sat_taps[3:0]);
+    corr = bb ^ ~(x ^ cacode(g1, g2, sat_taps[7:4], sat_taps[3:0]));
 endfunction
 
 
@@ -141,7 +142,7 @@ begin
 
     CODE_NCO_SET:
     begin
-        if (code_nco_frac < 4'd4) next_state = CODE_SET_WAIT;
+        if (code_nco_frac < 4'd3) next_state = CODE_SET_WAIT;
         else next_state = CODE_PHASE_SET;
     end
 
@@ -208,7 +209,7 @@ begin
 end
 
 // logic [9:0] code_phase;
-logic [8:0] code_nco_phase;
+logic [17:0] code_nco_phase;
 logic car_code_nco;
 
 logic [9:0] w_g1;
@@ -245,13 +246,14 @@ begin
     if (!rst)
     begin
         integrator_counter <= 12'b0;
-        integrator_0 <= 12'b0;
+        integrator_i0 <= 12'b0;
+        integrator_q0 <= 12'b0;
         sat0 <= 6'd31;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
         code_nco_frac <= 0;
-        code_nco_phase <= 9'b0;
+        code_nco_phase <= 18'b0;
         doppler_phase <= 16'b0;
         doppler_omega <= 16'b0;
         lo_i <= 1'b0;
@@ -267,13 +269,14 @@ begin
         if (current_state == HOLD)
         begin
             integrator_counter <= 12'b0;
-            integrator_0 <= 12'b0;
+            integrator_i0 <= 12'b0;
+			integrator_q0 <= 12'b0;
             sat0 <= 6'd31;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
             code_nco_frac <= 0;
-            code_nco_phase <= 9'b0;
+            code_nco_phase <= 18'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
             sat_counter <= 3'd0;
@@ -286,13 +289,14 @@ begin
         else if (current_state == CORRECT_SAMPLE)
         begin
             integrator_counter <= 12'b0;
-            integrator_0 <= 12'b0;
-            sat0 <= 6'd31;
+            integrator_i0 <= 12'b0;
+			integrator_q0 <= 12'b0;
+            sat0 <= 6'd26;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
             code_nco_frac <= 0;
-            code_nco_phase <= 9'b0;
+            code_nco_phase <= 18'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= DOPPLER_INIT;
             sat_counter <= 3'd0;
@@ -305,7 +309,8 @@ begin
         else if (current_state == ACQ_INIT)
         begin
             integrator_counter <= 12'b0;
-            integrator_0 <= 12'b0;
+            integrator_i0 <= 12'b0;
+			integrator_q0 <= 12'b0;
             g1 <= w_g1;
             g2 <= w_g2;
             doppler_phase <= 16'b0;
@@ -317,7 +322,8 @@ begin
         else if (current_state == CORR)
         begin
             integrator_counter <= integrator_counter + 12'b1;
-            integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], lo_i);
+            integrator_i0 <= integrator_i0 + corr(tap(sat0), g1, g2, ~i[integrator_counter], lo_i);
+            integrator_q0 <= integrator_q0 + corr(tap(sat0), g1, g2, q[integrator_counter], lo_q);
             //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b1);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
@@ -344,10 +350,9 @@ begin
         else if (current_state == CODE_NCO_SET)
         begin
             code_nco_frac <= code_nco_frac + 1'b1;
-            if (code_nco_frac == 5'd0) code_nco_phase <= 9'd127;
-            else if (code_nco_frac == 5'd1) code_nco_phase <= 9'd255;
-            else if (code_nco_frac == 4'd2) code_nco_phase <= 9'd383;
-            else if (code_nco_frac == 5'd3) code_nco_phase <= 9'd511;
+            if (code_nco_frac == 5'd0) code_nco_phase <= 18'd65535;
+            else if (code_nco_frac == 5'd1) code_nco_phase <= 18'd131072;
+            else if (code_nco_frac == 4'd2) code_nco_phase <= 18'd196607;
         end
 
         else if (current_state == CODE_PHASE_SET)

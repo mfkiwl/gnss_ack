@@ -15,7 +15,8 @@ logic i;
 logic q;
 
 logic [5:0] sat0;
-logic [11:0] integrator_0;
+logic [11:0] integrator_i0;
+logic [11:0] integrator_q0;
 logic corr_complete;
 logic search_complete;
 logic [9:0] code_phase;
@@ -24,9 +25,9 @@ logic signed [15:0] doppler_omega;
 
 gps_ack2
 #(
-    .CODE_NCO_OMEGA(131), // 131 4Msps
+    .CODE_NCO_OMEGA(67072), // 131 4Msps
 	.DOPPLER_STEP(8),
-	.DOPPLER_INIT(0),
+	.DOPPLER_INIT(17),
 	.DOPPLER_NUM(5)
 )
 uut
@@ -42,7 +43,8 @@ uut
 	.doppler_omega(doppler_omega),
     .corr_complete(corr_complete),
     .sat0(sat0),
-    .integrator_0(integrator_0),
+    .integrator_i0(integrator_i0),
+    .integrator_q0(integrator_q0),
 	.search_complete(search_complete)
 );
 
@@ -115,8 +117,8 @@ begin
     fd2 = $fopen("./corr2.dat", "w");
     forever @(posedge corr_complete)
     begin
-        $display("%d, %d, %d, %d, %d", sat0, code_phase, code_nco_frac, doppler_omega, integrator_0);
-        $fwrite(fd2, "%d, %d, %d, %d, %d\n", sat0, code_phase, code_nco_frac, doppler_omega, integrator_0);
+        $display("%d, %d, %d, %d, %d, %d", sat0, code_phase, code_nco_frac, doppler_omega, integrator_i0, integrator_q0);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat0, code_phase, code_nco_frac, doppler_omega, integrator_i0, integrator_q0);
     end
 end
 
