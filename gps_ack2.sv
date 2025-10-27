@@ -1,6 +1,7 @@
 module gps_ack2
 #(
-    parameter SAMPLE_BITS = 12, // 4096サンプル
+    parameter SAMPLE_BITS = 14, // 16384サンプル
+	parameter SAMPLE_NUM = 16384,
     parameter CODE_NCO_OMEGA = 67027, // 131 4Msps
     parameter DOPPLER_STEP = 13, //
     parameter DOPPLER_INIT = 13, //
@@ -18,8 +19,8 @@ module gps_ack2
     output logic [4:0] code_nco_frac,
     output logic signed [15:0] doppler_omega,
     output logic [5:0] sat0,
-    output logic [11:0] integrator_i0,
-    output logic [11:0] integrator_q0,
+    output logic [13:0] integrator_i0,
+    output logic [13:0] integrator_q0,
     output logic search_complete
 );
 
@@ -73,14 +74,39 @@ function cacode;
     cacode = g1[10] ^ g2[t1] ^ g2[t2];
 endfunction
 
+function doppler_i;
+    input sig_i;
+    input sig_q;
+    input dp_i;
+    input dp_q;
+    logic mix_i;
+    logic mix_q;
+
+    mix_i = ~(sig_i ^ dp_i);
+    mix_q = ~(sig_q ^ dp_q);
+    doppler_i = ~(mix_i ^ mix_q);
+endfunction
+
+function doppler_q;
+    input sig_i;
+    input sig_q;
+    input dp_i;
+    input dp_q;
+    logic mix_i;
+    logic mix_q;
+
+    mix_i = ~(sig_q ^ dp_i);
+    mix_q = ~(sig_i ^ dp_q);
+    doppler_q = mix_q ^ mix_i;
+endfunction
+
 function corr;
     input [7:0] sat_taps;
     input [9:0] g1;
     input [9:0] g2;
     input x;
-    input bb;
 
-    corr = bb ^ ~(x ^ cacode(g1, g2, sat_taps[7:4], sat_taps[3:0]));
+    corr =  ~(x ^ cacode(g1, g2, sat_taps[7:4], sat_taps[3:0]));
 endfunction
 
 
@@ -118,7 +144,7 @@ begin
 
     CORRECT_SAMPLE:
     begin
-        if (acq_counter <= 4095)
+        if (acq_counter < (SAMPLE_NUM - 1))
         begin
             next_state = CORRECT_SAMPLE;
         end
@@ -134,11 +160,11 @@ begin
 
     CORR:
     begin
-        if (integrator_counter < 4095) next_state = CORR;
+        if (integrator_counter < SAMPLE_NUM - 1) next_state = CORR;
         else next_state = CORR_COMPLETE;
     end
 
-    CORR_COMPLETE: next_state = CODE_NCO_SET;
+    CORR_COMPLETE: next_state = CODE_PHASE_SET; // next_state = CODE_NCO_SET;
 
     CODE_NCO_SET:
     begin
@@ -178,16 +204,16 @@ end
 
 assign rise_ad_clk = ~delay_ad_clk[1] & delay_ad_clk[0];
 
-logic [4095:0] i;
-logic [4095:0] q;
-logic [12:0] acq_counter;
+logic [16383:0] i;
+logic [16383:0] q;
+logic [13:0] acq_counter;
 logic acq_count_full;
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
     begin
-        i <= 4095'b0;
-        q <= 4095'b0;
+        i <= 16384'b0;
+        q <= 16384'b0;
         acq_counter <= 13'b0;
     end
     else
@@ -236,7 +262,7 @@ logic [7:0] doppler_counter;
 logic lo_i;
 logic lo_q;
 
-logic [11:0] integrator_counter;
+logic [13:0] integrator_counter;
 logic [2:0] sat_counter;
 
 logic [11:0] ca_code_counter;
@@ -245,9 +271,9 @@ always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
     begin
-        integrator_counter <= 12'b0;
-        integrator_i0 <= 12'b0;
-        integrator_q0 <= 12'b0;
+        integrator_counter <= 14'b0;
+        integrator_i0 <= 14'b0;
+        integrator_q0 <= 14'b0;
         sat0 <= 6'd31;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
@@ -268,9 +294,9 @@ begin
     begin
         if (current_state == HOLD)
         begin
-            integrator_counter <= 12'b0;
-            integrator_i0 <= 12'b0;
-			integrator_q0 <= 12'b0;
+            integrator_counter <= 14'b0;
+            integrator_i0 <= 14'b0;
+            integrator_q0 <= 14'b0;
             sat0 <= 6'd31;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
@@ -288,9 +314,9 @@ begin
 
         else if (current_state == CORRECT_SAMPLE)
         begin
-            integrator_counter <= 12'b0;
-            integrator_i0 <= 12'b0;
-			integrator_q0 <= 12'b0;
+            integrator_counter <= 14'b0;
+            integrator_i0 <= 14'b0;
+            integrator_q0 <= 14'b0;
             sat0 <= 6'd26;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
@@ -308,9 +334,9 @@ begin
 
         else if (current_state == ACQ_INIT)
         begin
-            integrator_counter <= 12'b0;
-            integrator_i0 <= 12'b0;
-			integrator_q0 <= 12'b0;
+            integrator_counter <= 14'b0;
+            integrator_i0 <= 14'b0;
+            integrator_q0 <= 14'b0;
             g1 <= w_g1;
             g2 <= w_g2;
             doppler_phase <= 16'b0;
@@ -322,8 +348,8 @@ begin
         else if (current_state == CORR)
         begin
             integrator_counter <= integrator_counter + 12'b1;
-            integrator_i0 <= integrator_i0 + corr(tap(sat0), g1, g2, ~i[integrator_counter], lo_i);
-            integrator_q0 <= integrator_q0 + corr(tap(sat0), g1, g2, q[integrator_counter], lo_q);
+            integrator_i0 <= integrator_i0 + corr(tap(sat0), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
+            integrator_q0 <= integrator_q0 + corr(tap(sat0), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
             //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b1);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
