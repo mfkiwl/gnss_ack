@@ -15,8 +15,29 @@ logic i;
 logic q;
 
 logic [5:0] sat0;
+logic [5:0] sat1;
+logic [5:0] sat2;
+logic [5:0] sat3;
+logic [5:0] sat4;
+logic [5:0] sat5;
+logic [5:0] sat6;
+logic [5:0] sat7;
 logic [13:0] integrator_i0;
 logic [13:0] integrator_q0;
+logic [13:0] integrator_i1;
+logic [13:0] integrator_q1;
+logic [13:0] integrator_i2;
+logic [13:0] integrator_q2;
+logic [13:0] integrator_i3;
+logic [13:0] integrator_q3;
+logic [13:0] integrator_i4;
+logic [13:0] integrator_q4;
+logic [13:0] integrator_i5;
+logic [13:0] integrator_q5;
+logic [13:0] integrator_i6;
+logic [13:0] integrator_q6;
+logic [13:0] integrator_i7;
+logic [13:0] integrator_q7;
 logic corr_complete;
 logic search_complete;
 logic [9:0] code_phase;
@@ -25,11 +46,11 @@ logic signed [15:0] doppler_omega;
 
 gps_ack2
 #(
-	.SAMPLE_NUM(8191),
+    .SAMPLE_NUM(8191),
     .CODE_NCO_OMEGA(67072), // 131 4Msps
-	.DOPPLER_STEP(8),
-	.DOPPLER_INIT(0),
-	.DOPPLER_NUM(0)
+    .DOPPLER_STEP(33),
+    .DOPPLER_INIT(0),
+    .DOPPLER_NUM(10)
 )
 uut
 (
@@ -40,13 +61,34 @@ uut
     .i_sample(i),
     .q_sample(q),
     .code_phase(code_phase),
-	.code_nco_frac(code_nco_frac),
-	.doppler_omega(doppler_omega),
+    .code_nco_frac(code_nco_frac),
+    .doppler_omega(doppler_omega),
     .corr_complete(corr_complete),
     .sat0(sat0),
+    .sat1(sat1),
+    .sat2(sat2),
+    .sat3(sat3),
+    .sat4(sat4),
+    .sat5(sat5),
+    .sat6(sat6),
+    .sat7(sat7),
     .integrator_i0(integrator_i0),
     .integrator_q0(integrator_q0),
-	.search_complete(search_complete)
+    .integrator_i1(integrator_i1),
+    .integrator_q1(integrator_q1),
+    .integrator_i2(integrator_i2),
+    .integrator_q2(integrator_q2),
+    .integrator_i3(integrator_i3),
+    .integrator_q3(integrator_q3),
+    .integrator_i4(integrator_i4),
+    .integrator_q4(integrator_q4),
+    .integrator_i5(integrator_i5),
+    .integrator_q5(integrator_q5),
+    .integrator_i6(integrator_i6),
+    .integrator_q6(integrator_q6),
+    .integrator_i7(integrator_i7),
+    .integrator_q7(integrator_q7),
+    .search_complete(search_complete)
 );
 
 always #10 clk = ~clk;
@@ -91,18 +133,9 @@ logic [7:0] tmp2;
 initial
 begin
 
-$dumpfile("test.vcd");
-$dumpvars(2, tb);
-$dumpall;
-$dumpon;
 clk = 1'b0;
 
 fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
-/*for (k = 0; k < 8192; k++)
-begin
-    rnum = $fread(tmp1, fd);
-    rnum = $fread(tmp2, fd);
-end*/
 
 repeat (65536) @(posedge clk)
 begin
@@ -111,7 +144,7 @@ begin
     rnum = $fread(tmp1, fd);
     rnum = $fread(tmp2, fd);
 
-    i = tmp1[1];
+    i = ~tmp1[1];
     q = tmp2[1];
     adc_clk= 1'b1;
 end
@@ -126,7 +159,21 @@ begin
     forever @(posedge corr_complete)
     begin
         $display("%d, %d, %d, %d, %d, %d", sat0, code_phase, code_nco_frac, doppler_omega, integrator_i0, integrator_q0);
+        $display("%d, %d, %d, %d, %d, %d", sat1, code_phase, code_nco_frac, doppler_omega, integrator_i1, integrator_q1);
+        $display("%d, %d, %d, %d, %d, %d", sat2, code_phase, code_nco_frac, doppler_omega, integrator_i2, integrator_q2);
+        $display("%d, %d, %d, %d, %d, %d", sat3, code_phase, code_nco_frac, doppler_omega, integrator_i3, integrator_q3);
+        $display("%d, %d, %d, %d, %d, %d", sat4, code_phase, code_nco_frac, doppler_omega, integrator_i4, integrator_q4);
+        $display("%d, %d, %d, %d, %d, %d", sat5, code_phase, code_nco_frac, doppler_omega, integrator_i5, integrator_q5);
+        $display("%d, %d, %d, %d, %d, %d", sat6, code_phase, code_nco_frac, doppler_omega, integrator_i6, integrator_q6);
+        $display("%d, %d, %d, %d, %d, %d", sat7, code_phase, code_nco_frac, doppler_omega, integrator_i7, integrator_q7);
         $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat0, code_phase, code_nco_frac, doppler_omega, integrator_i0, integrator_q0);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat1, code_phase, code_nco_frac, doppler_omega, integrator_i1, integrator_q1);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat2, code_phase, code_nco_frac, doppler_omega, integrator_i2, integrator_q2);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat3, code_phase, code_nco_frac, doppler_omega, integrator_i3, integrator_q3);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat4, code_phase, code_nco_frac, doppler_omega, integrator_i4, integrator_q4);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat5, code_phase, code_nco_frac, doppler_omega, integrator_i5, integrator_q5);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat6, code_phase, code_nco_frac, doppler_omega, integrator_i6, integrator_q6);
+        $fwrite(fd2, "%d, %d, %d, %d, %d, %d\n", sat7, code_phase, code_nco_frac, doppler_omega, integrator_i7, integrator_q7);
     end
 end
 
