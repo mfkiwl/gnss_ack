@@ -189,7 +189,7 @@ begin
 
     CODE_NCO_SET:
     begin
-        if (code_nco_frac < 4'd3) next_state = CODE_SET_WAIT;
+        if (code_nco_frac < 5'd3) next_state = CODE_SET_WAIT;
         else next_state = CODE_PHASE_SET;
     end
 
@@ -235,7 +235,7 @@ begin
     begin
         i <= 16384'b0;
         q <= 16384'b0;
-        acq_counter <= 13'b0;
+        acq_counter <= 14'b0;
     end
     else
     begin
@@ -250,7 +250,7 @@ begin
         end
         else if (current_state == DONE)
         begin
-            acq_counter <= 12'b0;
+            acq_counter <= 14'b0;
         end
     end
 end
@@ -449,23 +449,23 @@ begin
 
         else if (current_state == CORR)
         begin
-            integrator_counter <= integrator_counter + 12'b1;
-            integrator_i0 <= integrator_i0 + corr(tap(sat0), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q0 <= integrator_q0 + corr(tap(sat0), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i1 <= integrator_i1 + corr(tap(sat1), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q1 <= integrator_q1 + corr(tap(sat1), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i2 <= integrator_i2 + corr(tap(sat2), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q2 <= integrator_q2 + corr(tap(sat2), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i3 <= integrator_i3 + corr(tap(sat3), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q3 <= integrator_q3 + corr(tap(sat3), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i4 <= integrator_i4 + corr(tap(sat4), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q4 <= integrator_q4 + corr(tap(sat4), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i5 <= integrator_i5 + corr(tap(sat5), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q5 <= integrator_q5 + corr(tap(sat5), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i6 <= integrator_i6 + corr(tap(sat6), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q6 <= integrator_q6 + corr(tap(sat6), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_i7 <= integrator_i7 + corr(tap(sat7), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
-            integrator_q7 <= integrator_q7 + corr(tap(sat7), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q));
+            integrator_counter <= integrator_counter + 14'b1;
+            integrator_i0 <= integrator_i0 + {13'd0, corr(tap(sat0), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q0 <= integrator_q0 + {13'd0, corr(tap(sat0), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i1 <= integrator_i1 + {13'd0, corr(tap(sat1), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q1 <= integrator_q1 + {13'd0, corr(tap(sat1), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i2 <= integrator_i2 + {13'd0, corr(tap(sat2), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q2 <= integrator_q2 + {13'd0, corr(tap(sat2), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i3 <= integrator_i3 + {13'd0, corr(tap(sat3), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q3 <= integrator_q3 + {13'd0, corr(tap(sat3), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i4 <= integrator_i4 + {13'd0, corr(tap(sat4), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q4 <= integrator_q4 + {13'd0, corr(tap(sat4), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i5 <= integrator_i5 + {13'd0, corr(tap(sat5), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q5 <= integrator_q5 + {13'd0, corr(tap(sat5), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i6 <= integrator_i6 + {13'd0, corr(tap(sat6), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q6 <= integrator_q6 + {13'd0, corr(tap(sat6), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_i7 <= integrator_i7 + {13'd0, corr(tap(sat7), g1, g2, doppler_i(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
+            integrator_q7 <= integrator_q7 + {13'd0, corr(tap(sat7), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
             //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b1);
 
             {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
@@ -479,8 +479,8 @@ begin
             {car_doppler_nco, doppler_phase} = doppler_phase + doppler_omega;
             if (car_doppler_nco)
             begin
-                lo_i <= LO_SIN[doppler_phase[15:14]];
-                lo_q <= LO_COS[doppler_phase[15:14]];
+                lo_q <= LO_SIN[doppler_phase[15:14]];
+                lo_i <= LO_COS[doppler_phase[15:14]];
             end
         end
 
@@ -494,7 +494,7 @@ begin
             code_nco_frac <= code_nco_frac + 1'b1;
             if (code_nco_frac == 5'd0) code_nco_phase <= 18'd65535;
             else if (code_nco_frac == 5'd1) code_nco_phase <= 18'd131072;
-            else if (code_nco_frac == 4'd2) code_nco_phase <= 18'd196607;
+            else if (code_nco_frac == 5'd2) code_nco_phase <= 18'd196607;
         end
 
         else if (current_state == CODE_PHASE_SET)
@@ -506,7 +506,7 @@ begin
         else if (current_state == DOPPLER_SET)
         begin
             code_phase <= 10'b0;
-            code_nco_frac <= 9'd0;
+            code_nco_frac <= 5'd0;
             doppler_phase <= 16'b0;
             doppler_omega <= doppler_omega + DOPPLER_STEP;
             doppler_counter <= doppler_counter + 1'b1;
