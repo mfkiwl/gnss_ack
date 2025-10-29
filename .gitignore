@@ -2,3 +2,5 @@
 *.vcd
 *.out
 *.dat
+obj_dir/
+
