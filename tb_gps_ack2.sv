@@ -46,11 +46,11 @@ logic signed [15:0] doppler_omega;
 
 gps_ack2
 #(
-    .SAMPLE_NUM(16383),
+    .SAMPLE_NUM(4095),
     .CODE_NCO_OMEGA(67072), // 131 4Msps
-    .DOPPLER_STEP(17),
-    .DOPPLER_INIT(0),
-    .DOPPLER_NUM(10)
+    .DOPPLER_STEP(4),
+    .DOPPLER_INIT(-16'sd80),
+    .DOPPLER_NUM(40)
 )
 uut
 (

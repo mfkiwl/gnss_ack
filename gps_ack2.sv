@@ -3,8 +3,8 @@ module gps_ack2
     parameter SAMPLE_BITS = 14, // 16384サンプル
     parameter SAMPLE_NUM = 16384,
     parameter CODE_NCO_OMEGA = 67027, // 131 4Msps
-    parameter DOPPLER_STEP = 13, //
-    parameter DOPPLER_INIT = 13, //
+    parameter bit [15:0] DOPPLER_STEP = 13, //
+    parameter bit [15:0] DOPPLER_INIT = 16'(13), //
     parameter DOPPLER_NUM = 2
 )
 (
@@ -468,7 +468,7 @@ begin
             integrator_q7 <= integrator_q7 + {13'd0, corr(tap(sat7), g1, g2, doppler_q(i[integrator_counter], q[integrator_counter], lo_i, lo_q))};
             //integrator_0 <= integrator_0 + corr(tap(sat0), g1, g2, i[integrator_counter], 1'b1);
 
-            {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
+            {car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
             begin
                 g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
@@ -476,12 +476,9 @@ begin
                 ca_code_counter <= ca_code_counter + 1'b1;
             end
 
-            {car_doppler_nco, doppler_phase} = doppler_phase + doppler_omega;
-            if (car_doppler_nco)
-            begin
-                lo_q <= LO_SIN[doppler_phase[15:14]];
-                lo_i <= LO_COS[doppler_phase[15:14]];
-            end
+            {car_doppler_nco, doppler_phase} <= doppler_phase + doppler_omega;
+            lo_i <= LO_SIN[doppler_phase[15:14]];
+            lo_q<= LO_COS[doppler_phase[15:14]];
         end
 
         else if (current_state == CORR_COMPLETE)
