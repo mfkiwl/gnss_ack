@@ -143,7 +143,7 @@ begin
     rnum = $fread(tmp2, fd);
 
     i = tmp1[2];
-    q = tmp2[2];
+    q = ~tmp2[2];
     adc_clk= 1'b1;
 end
 //$finish;
