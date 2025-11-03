@@ -43,5 +43,6 @@ print("Corr_q: {0:d}".format(corr_data[sat1, 5][min_index]))
 print("Corr: {0:f}".format(corr[min_index]))
 
 plt.plot(corr_data[sat1, 1], corr, '.')
+plt.ylim((0, 400))
 plt.show()
 
