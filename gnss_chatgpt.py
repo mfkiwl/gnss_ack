@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 fs = 4.0e6             # サンプリング周波数 [Hz]
 chip_rate = 1.023e6    # C/Aコードレート [Hz]
 code_len = 1023
-prn = 31               # 対象PRN
+prn =  31             # 対象PRN
 coh_ms = 1             # コヒーレント積分時間 [ms]
-noncoh_num =  4      # 非コヒーレント回数
-fd_candidates = np.arange(-1000, 1001, 1000)  # ドップラー探索範囲 [Hz]
+noncoh_num = 8     # 非コヒーレント回数
+fd_candidates = np.arange(-5000, 5001, 500)  # ドップラー探索範囲 [Hz]
 
 # --- C/Aコード生成 (ここでは既にPRN31の±1配列があると仮定) ---
 # cacode = np.array([...], dtype=np.int8)
@@ -61,7 +61,7 @@ def gen_code_L1CA_G1(N):
 def gen_code_L1CA_G2(N):
     return LFSR(N, 0b1111111111, 0b0110010111, 10)
 
-cacode = gen_code_L1CA(31)
+cacode = gen_code_L1CA(prn)
 
 cacode = (cacode & 0x4) >> 2
 print(cacode)
@@ -86,62 +86,60 @@ chip_idx = (np.floor(np.arange(int(fs*coh_ms/1000)) * fcw) % code_len).astype(in
 
 # --- 相関結果格納 ---
 #corr_map = np.zeros((len(fd_candidates), code_len))
-corr_map = np.zeros(code_len)
+corr_map = np.zeros((len(fd_candidates), code_len))
 
 def xor_corr(data_bits, code_bits):
-	xor = np.bitwise_xor(data_bits, code_bits)
-	return np.sum(1 - 2*xor)
+    xor = np.bitwise_xor(data_bits, code_bits)
+    return np.sum(1 - 2*xor)
 
 # --- メインループ ---
-#for fi, fd in enumerate(fd_candidates):
-#    print(f"Doppler {fd:+6.0f} Hz ...")
-#
-#    # ドップラー補正用複素指数
-#    n = np.arange(samples)
-#    w = np.exp(-1j * 2 * np.pi * fd * n / fs)
-#    iq_corr = iq * w
-#
-#    # 20 ms 非コヒーレント合成
-#    noncoh_blocks = samples // int(fs * coh_ms / 1000)
-for code_delay in range(code_len):
-	local_code = np.roll(cacode, code_delay)[chip_idx]
+# Doppler search loop
+for fi, fd in enumerate(fd_candidates):
+    print(f"Doppler {fd:+6.0f} Hz ...")
+    n = np.arange(samples)
+    carrier_i = (np.sign(np.cos(2*np.pi*fd/fs*n)) > 0).astype(np.uint8)
+    carrier_q = (np.sign(np.sin(2*np.pi*fd/fs*n)) > 0).astype(np.uint8)
 
-	# --- コヒーレント相関を20回繰り返して非コヒーレント積分 ---
-	power_sum = 0.0
-	for blk in range(noncoh_num):
-		start = blk * int(fs * coh_ms / 1000)
-		stop  = start + int(fs * coh_ms / 1000)
-		i_corr = xor_corr(i[start:stop], local_code)
-		q_corr = xor_corr(q[start:stop], local_code)
+    i_mixed = np.bitwise_xor(i, carrier_i)
+    q_mixed = np.bitwise_xor(q, carrier_q)
 
-		power_sum += np.abs(i_corr) + np.abs(q_corr)
+    for code_delay in range(code_len):
+        local_code = np.roll(cacode, code_delay)[chip_idx]
 
-	print("{}, {}".format(code_delay, power_sum))
-	#print("{}, {}".format(code_delay, power_sum))
-	corr_map[code_delay] = power_sum
+        # --- コヒーレント相関をnoncoh_num回繰り返して非コヒーレント積分 ---
+        power_sum = 0.0
+        for blk in range(noncoh_num):
+            start = blk * int(fs * coh_ms / 1000)
+            stop  = start + int(fs * coh_ms / 1000)
+            i_corr = xor_corr(i_mixed[start:stop], local_code)
+            q_corr = xor_corr(q_mixed[start:stop], local_code)
+
+            power_sum += np.abs(i_corr) + np.abs(q_corr)
+
+        corr_map[fi, code_delay] = power_sum
 
 # --- 結果表示 ---
-#max_fd_i, max_code_i = np.unravel_index(np.argmax(corr_map), corr_map.shape)
-#print(f"Detected peak: Doppler={fd_candidates[max_fd_i]} Hz, Code phase={max_code_i}")
-
-#fig = plt.figure()
-#ax = fig.add_subplot(211)
-#im1 =ax.imshow(10*np.log10(corr_map.T+1e-12), aspect='auto',
-#           extent=[fd_candidates[0], fd_candidates[-1], 0, 1023],
-#           origin='lower', cmap='inferno')
-#ax.set_xlabel("Doppler [Hz]")
-#ax.set_ylabel("Code phase [chips]")
-#ax.set_title("GPS PRN31 correlation (20 ms non-coherent)")
-#fig.colorbar(im1, label="Power [dB]")
-#ay = fig.add_subplot(212)
-#ay.plot(np.arange(1023), corr_map[max_fd_i, :])
-
-idx = np.argmax(corr_map)
-print("Detected peak: corr = {}, code phase = {}".format(corr_map[idx], idx))
+max_fd_i, max_code_i = np.unravel_index(np.argmax(corr_map), corr_map.shape)
+print(f"Detected peak: Doppler={fd_candidates[max_fd_i]} Hz, Code phase={max_code_i}, Corr={corr_map[max_fd_i, max_code_i]}")
 
 fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.plot(range(1023), corr_map)
-ax.set_ylim(0,3000)
+ax = fig.add_subplot(211)
+im1 =ax.imshow(corr_map.T, aspect='auto',
+           extent=[fd_candidates[0], fd_candidates[-1], 0, 1023],
+           origin='lower', cmap='inferno')
+ax.set_xlabel("Doppler [Hz]")
+ax.set_ylabel("Code phase [chips]")
+ax.set_title("GPS PRN{} correlation ({} ms non-coherent)".format(prn,noncoh_num))
+fig.colorbar(im1, label="Correlation")
+ay = fig.add_subplot(212)
+ay.plot(np.arange(1023), corr_map[max_fd_i, :])
+
+#idx = np.argmax(corr_map)
+#print("Detected peak: corr = {}, code phase = {}".format(corr_map[idx], idx))
+
+#fig = plt.figure()
+#ax = fig.add_subplot(111)
+#ax.plot(range(1023), corr_map)
+#ax.set_ylim(0,3000)
 
 plt.show()
