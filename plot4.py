@@ -28,6 +28,7 @@ print("Index: {0:d}".format(max_index))
 print("phase: {0:d}".format(corr_data[sat1, 1][max_index]))
 print("corr: {0:d}".format(corr_data[sat1, 2][max_index]))
 
-plt.plot(corr_data[sat1, 1], corr_data[sat1, 2], '.')
+plt.plot(corr_data[sat1, 1], corr_data[sat1, 2], '-')
+plt.ylim(0,3000)
 plt.show()
 

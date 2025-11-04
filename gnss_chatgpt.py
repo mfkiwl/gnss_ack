@@ -70,10 +70,9 @@ for code_delay in range(code_len):
 		i_corr = xor_corr(i[start:stop], local_code)
 		q_corr = xor_corr(q[start:stop], local_code)
 
-		#print("{}, {}".format(i_corr, q_corr))
-
 		power_sum += np.abs(i_corr) + np.abs(q_corr)
 
+	print("{}, {}".format(code_delay, power_sum))
 	#print("{}, {}".format(code_delay, power_sum))
 	corr_map[code_delay] = power_sum
 
@@ -93,8 +92,12 @@ for code_delay in range(code_len):
 #ay = fig.add_subplot(212)
 #ay.plot(np.arange(1023), corr_map[max_fd_i, :])
 
+idx = np.argmax(corr_map)
+print("Detected peak: corr = {}, code phase = {}".format(corr_map[idx], idx))
+
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.plot(range(1023), corr_map)
+ax.set_ylim(0,3000)
 
 plt.show()

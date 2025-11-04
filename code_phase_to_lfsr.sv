@@ -11,7 +11,7 @@ logic [19:0] rom [0:1022];
 
 initial
 begin
-	$readmemh("phase_state.hex", rom);
+	$readmemh("phase_state_rev.hex", rom);
 end
 
 

@@ -83,9 +83,9 @@ function signed [11:0] corr;
     input x;
     logic tmp;
 
-    tmp = (x ^ ~cacode(g1, g2, sat_taps[7:4], sat_taps[3:0]));
-    if (tmp == 1'd0) corr = -12'sd1;
-    else corr = 12'sd1;
+    tmp = (x ^ cacode(g1, g2, sat_taps[7:4], sat_taps[3:0]));
+    if (tmp == 1'd0) corr = 12'sd1;
+    else corr = -12'sd1;
 endfunction
 
 function [11:0] abs;
@@ -123,6 +123,7 @@ parameter CODE_NCO_OMEGA = 67043; // 131 4Msps
 //parameter CODE_NCO_OMEGA = 33522; // 131 4Msps
 
 logic [5:0] sat0;
+logic [7:0] sat0_tap;
 
 logic [19:0] rom [0:1022];
 logic [9:0] code_phase;
@@ -143,16 +144,17 @@ initial
 begin
 
     /* CODE phase */
-    $readmemh("phase_state.hex", rom);
+    $readmemh("phase_table_rev.hex", rom);
 
     sat0 = 6'd31;
     code_phase = 10'd0;
+	sat0_tap = tap(sat0);
     //doppler_omega = 16'sd52;
 
     /* IQ data read */
     fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
 
-    for (k = 0; k < 32000; k++)
+    for (k = 0; k < 16000; k++)
     begin
         rnum = $fread(tmp1, fd);
         rnum = $fread(tmp2, fd);
@@ -160,10 +162,6 @@ begin
         i[k] = tmp1[2];
         q[k] = tmp2[2];
 
-		if (k < 20)
-		begin
-			$display("%d, %d", tmp1[2], tmp2[2]);
-		end
     end
 
     fd2 = $fopen("./corr2.dat", "w");
@@ -201,7 +199,6 @@ begin
                 */
                 data_count = data_count + 14'd1;
             end
-			//$display("%d, %d", abs(integrator_i) , abs(integrator_q));
             power_sum = power_sum + {20'd0, abs(integrator_i)} + {20'd0, abs(integrator_q)};
         end
         $display("%d, %d, %d", sat0, code_phase, power_sum);
