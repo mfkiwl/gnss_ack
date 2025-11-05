@@ -97,8 +97,8 @@ logic signed [11:0] integrator_i;
 logic signed [11:0] integrator_q;
 logic [11:0] ca_code_counter;
 
-logic [15999:0] i;
-logic [15999:0] q;
+logic [31999:0] i;
+logic [31999:0] q;
 logic [13:0] acq_counter;
 
 logic [17:0] code_nco_phase;
@@ -115,6 +115,7 @@ integer rnum2;
 integer k;
 integer l;
 integer m;
+integer n;
 
 logic [7:0] tmp1;
 logic [7:0] tmp2;
@@ -136,7 +137,7 @@ logic signed [15:0] doppler_phase;
 logic car_doppler_nco;
 logic signed [15:0] doppler_omega;
 
-logic [13:0] data_count;
+logic [14:0] data_count;
 
 logic [31:0] power_sum;
 
@@ -146,15 +147,15 @@ begin
     /* CODE phase */
     $readmemh("phase_table_rev.hex", rom);
 
-    sat0 = 6'd31;
+    sat0 = 6'd32;
     code_phase = 10'd0;
-	sat0_tap = tap(sat0);
+    sat0_tap = tap(sat0);
     //doppler_omega = 16'sd52;
 
     /* IQ data read */
     fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
 
-    for (k = 0; k < 16000; k++)
+    for (k = 0; k < 32000; k++)
     begin
         rnum = $fread(tmp1, fd);
         rnum = $fread(tmp2, fd);
@@ -168,44 +169,48 @@ begin
     lo_i = 1'b0;
     lo_q = 1'b0;
 
-    //for (m = -80; m < 80; m += 4)
-    //begin
-    for (l = 0; l < 1023; l++)
+    for (n = -80; n < 80; n += 4)
     begin
-        data_count = 14'd0;
-        power_sum = 0;
-        for (m = 0; m < 4; m++)
+		code_phase = 10'd0;
+        for (l = 0; l < 1023; l++)
         begin
-            integrator_i = 12'sd0;
-            integrator_q = 12'sd0;
-            code_nco_phase = 18'd0;
-            {g1, g2} = rom[code_phase];
+            data_count = 15'd0;
+            power_sum = 0;
+            doppler_phase = 16'sd0;
+            doppler_omega = n[15:0];
 
-            for (k = 0; k < 4000; k++)
+            for (m = 0; m < 8; m++)
             begin
-                integrator_i = integrator_i + corr(tap(sat0), g1, g2, i[data_count]);// doppler_i(i[data_count], q[data_count], lo_i, lo_q));
-                integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]);// doppler_q(i[data_count], q[data_count], lo_i, lo_q));
-                {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
-                if (car_code_nco)
+                integrator_i = 12'sd0;
+                integrator_q = 12'sd0;
+                code_nco_phase = 18'd0;
+                {g1, g2} = rom[code_phase];
+
+                for (k = 0; k < 4000; k++)
                 begin
-                    g1[10:1] = {g1[9:1], g1[3] ^ g1[10]};
-                    g2[10:1] = {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
-                    ca_code_counter = ca_code_counter + 1'b1;
+                    integrator_i = integrator_i + corr(tap(sat0), g1, g2, i[data_count]^lo_i);
+                    integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]^lo_q);
+                    {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
+                    if (car_code_nco)
+                    begin
+                        g1[10:1] = {g1[9:1], g1[3] ^ g1[10]};
+                        g2[10:1] = {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
+                        ca_code_counter = ca_code_counter + 1'b1;
+                    end
+
+                    {car_doppler_nco, doppler_phase} = doppler_phase + doppler_omega;
+                    lo_i = LO_COS[doppler_phase[15:14]];
+                    lo_q = LO_SIN[doppler_phase[15:14]];
+
+                    data_count = data_count + 15'd1;
                 end
-                /*
-                {car_doppler_nco, doppler_phase} = doppler_phase + doppler_omega;
-                lo_i = LO_SIN[doppler_phase[15:14]];
-                lo_q = LO_COS[doppler_phase[15:14]];
-                */
-                data_count = data_count + 14'd1;
+                power_sum = power_sum + {20'd0, abs(integrator_i)} + {20'd0, abs(integrator_q)};
             end
-            power_sum = power_sum + {20'd0, abs(integrator_i)} + {20'd0, abs(integrator_q)};
+            $display("%d, %d, %d, %d", sat0, code_phase, doppler_omega, power_sum);
+            $fwrite(fd2, "%d, %d, %d, %d\n", sat0, code_phase, doppler_omega, power_sum);
+            code_phase = code_phase + 1;
         end
-        $display("%d, %d, %d", sat0, code_phase, power_sum);
-        $fwrite(fd2, "%d, %d, %d\n", sat0, code_phase, power_sum);
-        code_phase = code_phase + 1;
     end
-    //end
     $finish;
 end
 

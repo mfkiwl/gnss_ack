@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 fs = 4.0e6             # サンプリング周波数 [Hz]
 chip_rate = 1.023e6    # C/Aコードレート [Hz]
 code_len = 1023
-prn =  31             # 対象PRN
+prn =  26             # 対象PRN
 coh_ms = 1             # コヒーレント積分時間 [ms]
-noncoh_num = 8     # 非コヒーレント回数
+noncoh_num = 4     # 非コヒーレント回数
 fd_candidates = np.arange(-5000, 5001, 500)  # ドップラー探索範囲 [Hz]
 
 # --- C/Aコード生成 (ここでは既にPRN31の±1配列があると仮定) ---
