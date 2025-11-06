@@ -41,32 +41,6 @@ function [7:0] tap;
     end
 endfunction
 
-function doppler_i;
-    input sig_i;
-    input sig_q;
-    input dp_i;
-    input dp_q;
-    logic mix_i;
-    logic mix_q;
-
-    mix_i = ~(sig_i ^ dp_i);
-    mix_q = ~(sig_q ^ dp_q);
-    doppler_i = ~(mix_i ^ mix_q);
-endfunction
-
-function doppler_q;
-    input sig_i;
-    input sig_q;
-    input dp_i;
-    input dp_q;
-    logic mix_i;
-    logic mix_q;
-
-    mix_i = ~(sig_q ^ dp_i);
-    mix_q = ~(sig_i ^ dp_q);
-    doppler_q = mix_q ^ mix_i;
-endfunction
-
 function cacode;
     input [10:1] g1;
     input [10:1] g2;
@@ -171,7 +145,7 @@ begin
 
     for (n = -80; n < 80; n += 4)
     begin
-		code_phase = 10'd0;
+        code_phase = 10'd0;
         for (l = 0; l < 1023; l++)
         begin
             data_count = 15'd0;
