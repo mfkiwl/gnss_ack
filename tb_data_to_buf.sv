@@ -77,6 +77,7 @@ begin
         flag_reg <= {flag_reg[0], flag_buf_count};
         if (flag_reg[1] == 1'd0 && flag_reg[0] == 1'd1) write_enable <= 1'd1;
         else write_enable <= 1'd0;
+        if (flag_reg[1] == 1'd1 && flag_reg[0] == 1'd0) address <= address + 13'd1;
     end
 end
 
