@@ -10,6 +10,8 @@ module bsram_18k_36
 );
 
 logic [35:0] ram [0:511];
+//logic [35:0] ram;
+
 
 always_ff @(posedge CLK)
 begin

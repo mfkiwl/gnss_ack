@@ -16,7 +16,7 @@ bsram_18k_36 bbi
     .AD(address),
     .WRE(write_enable),
     .CE(1'd0),
-    .CLK(1'd0),
+    .CLK(clk),
     .RESET(1'd0)
 );
 
@@ -42,15 +42,16 @@ logic [13:0] address;
 logic write_enable;
 
 logic capture;
-
 logic [2:0] buf_count;
+logic flag_buf_count;
+
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
     begin
         datain_i <= 8'd0;
         address <= 14'd0;
-        buf_count <= 3'd7;
+        buf_count <= 3'd0;
         write_enable <= 1'b0;
     end
     else
@@ -59,17 +60,25 @@ begin
         begin
             if (adc_clk_flag)
             begin
-                datain_i <= {i, datain_i[7:1]};
+                datain_i[buf_count] <= i;
 
-                if (buf_count < 3'd7) buf_count <= buf_count + 3'd1;
-                else buf_count <= 3'd0;
+                {flag_buf_count, buf_count} <= buf_count + 4'd1;
             end
-            if (buf_count == 3'd7) write_enable <= 1'b0;
-            else write_enable <= 1'b1;
         end
     end
 end
 
+logic [1:0] flag_reg;
+always_ff @(posedge clk or negedge rst)
+begin
+    if (!rst) write_enable <= 1'd0;
+    else
+    begin
+        flag_reg <= {flag_reg[0], flag_buf_count};
+        if (flag_reg[1] == 1'd0 && flag_reg[0] == 1'd1) write_enable <= 1'd1;
+        else write_enable <= 1'd0;
+    end
+end
 
 
 
