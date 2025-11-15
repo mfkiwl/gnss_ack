@@ -9,22 +9,22 @@ always #100 adc_clk = ~adc_clk;
 logic i;
 logic q;
 
-bsram_18k_36 bbi
+bsram_18k_36_2u bbi
 (
     .DO(dataout_i),
     .DI(datain_i),
-    .AD({address, 5'd0}),
+    .AD(address),
     .WRE(write_enable_0),
     .CE(1'd0),
     .CLK(clk),
     .RESET(1'd0)
 );
 
-bsram_18k_36 bbq
+bsram_18k_36_2u bbq
 (
     .DO(dataout_q),
     .DI(datain_q),
-    .AD({address, 5'd0}),
+    .AD(address),
     .WRE(write_enable_0),
     .CE(1'd0),
     .CLK(clk),
@@ -51,11 +51,13 @@ logic [35:0] dataout_i;
 logic [35:0] datain_i;
 logic [35:0] dataout_q;
 logic [35:0] datain_q;
-logic [8:0] address;
+logic [9:0] address;
 logic write_enable_0;
 
 logic capture;
 logic [5:0] buf_count;
+logic [11:0] sample_count;
+logic [3:0] incoh_count;
 logic flag_buf_count;
 
 always_ff @(posedge clk or negedge rst)
@@ -64,8 +66,10 @@ begin
     begin
         datain_i <= 36'd0;
         datain_q <= 36'd0;
-        address <= 9'd0;
+        address <= 10'd0;
         buf_count <= 6'd0;
+        sample_count <= 12'd0;
+        incoh_count <= 4'd0;
     end
     else
     begin
@@ -76,7 +80,7 @@ begin
                 datain_i[buf_count] <= i;
                 datain_q[buf_count] <= q;
 
-                if (buf_count < 6'd35)
+                if (buf_count < 6'd35 && sample_count < 12'd3999)
                 begin
                     buf_count <= buf_count + 6'd1;
                     flag_buf_count <= 1'b0;
@@ -86,6 +90,17 @@ begin
                     buf_count <= 6'd0;
                     flag_buf_count <= 1'b1;
                 end
+
+                if (sample_count < 12'd3999)
+                begin
+                    sample_count <= sample_count + 12'd1;
+                end
+                else
+                begin
+                    sample_count <= 12'd0;
+                    incoh_count <= incoh_count + 4'b1;
+                end
+
             end
         end
     end
@@ -137,17 +152,19 @@ rst = 1'b1;
 @(negedge adc_clk);
 capture = 1'd1;
 
-@(posedge (address == 9'd112));
+@(posedge (incoh_count == 4'd8));
 
 capture = 1'd0;
 
-for (ii = 0; ii < 112; ii++)
+repeat(20)@(posedge clk);
+
+for (ii = 0; ii < 1023; ii++)
 begin
-	address = ii[8:0];
-	@(posedge clk);
-	@(posedge clk);
-	$display("AD = %d, i = %h", address, dataout_i);
-	$display("AD = %d, q = %h", address, dataout_q);
+    address = ii[9:0];
+    @(posedge clk);
+    @(posedge clk);
+    $display("AD = %d, i = %h", address, dataout_i);
+    $display("AD = %d, q = %h", address, dataout_q);
 end
 
 
@@ -157,7 +174,7 @@ end
 initial
 begin
     fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
-    repeat (200000) @(negedge adc_clk)
+    repeat (280000) @(negedge adc_clk)
     begin
         rnum = $fread(tmp1, fd);
         rnum = $fread(tmp2, fd);
