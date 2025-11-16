@@ -18,7 +18,7 @@ module gps_ack2
     output logic [9:0] code_phase,
     output logic signed [15:0] doppler_omega,
     output logic [5:0] sat0,
-    output logic [13:0] integrator0,
+    output logic [13:0] integrator_0,
     output logic search_complete
 );
 
@@ -124,7 +124,7 @@ begin
 
     CORRECT_SAMPLE:
     begin
-        if (acq_counter < (SAMPLE_NUM - 1))
+        if (incoh_count < 4'd8)
         begin
             next_state = CORRECT_SAMPLE;
         end
@@ -147,12 +147,6 @@ begin
     end
 
     CORR_COMPLETE: next_state = CODE_PHASE_SET; // next_state = CODE_NCO_SET;
-
-    CODE_NCO_SET:
-    begin
-        if (code_nco_frac < 5'd3) next_state = CODE_SET_WAIT;
-        else next_state = CODE_PHASE_SET;
-    end
 
     CODE_PHASE_SET:
     begin
@@ -178,41 +172,112 @@ end
 
 // ADC クロックのシンクロナイザ
 logic [1:0] delay_ad_clk;
-logic rise_ad_clk;
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst) delay_ad_clk <= 2'b0;
     else delay_ad_clk <= {delay_ad_clk[0], adc_clk};
 end
 
-assign rise_ad_clk = ~delay_ad_clk[1] & delay_ad_clk[0];
+logic adc_clk_flag;
+assign adc_clk_flag = ~delay_ad_clk[1] & delay_ad_clk[0];
 
-bsram_18k_46 b0i
+
+// buf関係のレジスタ
+logic [35:0] dataout_i;
+logic [35:0] datain_i;
+logic [35:0] dataout_q;
+logic [35:0] datain_q;
+logic [9:0] address;
+logic write_enable_0;
+
+logic [5:0] buf_count;
+logic [11:0] sample_count;
+logic [3:0] incoh_count;
+logic flag_buf_count;
+logic [1:0] flag_reg;
+
+bsram_18k_36_2u bbi
 (
-    .D0(D0),
-    .DI(DI),
-    .AD(AD),
-    .WRE(WRE),
-    .CE(CE),
-    .CLK(CLK),
-    .RESET(RESET)
+    .DO(dataout_i),
+    .DI(datain_i),
+    .AD(address),
+    .WRE(write_enable_0),
+    .CE(1'd0),
+    .CLK(clk),
+    .RESET(1'd0)
 );
 
-bsram_18k_46 b0q
+bsram_18k_36_2u bbq
 (
-    .D0(D0),
-    .DI(DI),
-    .AD(AD),
-    .WRE(WRE),
-    .CE(CE),
-    .CLK(CLK),
-    .RESET(RESET)
+    .DO(dataout_q),
+    .DI(datain_q),
+    .AD(address),
+    .WRE(write_enable_0),
+    .CE(1'd0),
+    .CLK(clk),
+    .RESET(1'd0)
 );
 
-logic [35:0] i_buf;
-logic [35:0] q_buf;
+/* バッファへのデータの取り込み */
 
-// logic [9:0] code_phase;
+always_ff @(posedge clk)
+begin
+    if (!rst)
+    begin
+        datain_i <= 36'd0;
+        datain_q <= 36'd0;
+        buf_count <= 6'd0;
+        sample_count <= 12'd0;
+        incoh_count <= 4'd0;
+        write_enable_0 <= 1'd0;
+        address <= 10'd0;
+        flag_reg <= 2'd0;
+    end
+    else if (current_state == CORRECT_SAMPLE)
+    begin
+
+        if (adc_clk_flag)
+        begin
+            datain_i[buf_count] <= i_sample;
+            datain_q[buf_count] <= q_sample;
+
+            if (buf_count < 6'd35 && sample_count < 12'd3999)
+            begin
+                buf_count <= buf_count + 6'd1;
+            end
+            else
+            begin
+                buf_count <= 6'd0;
+            end
+
+            if (sample_count < 12'd3999)
+            begin
+                sample_count <= sample_count + 12'd1;
+            end
+            else
+            begin
+                sample_count <= 12'd0;
+                incoh_count <= incoh_count + 4'b1;
+            end
+
+
+            if (buf_count == 6'd35 || sample_count == 12'd3999) write_enable_0 <= 1'd1;
+            else write_enable_0 <= 1'd0;
+
+            if (buf_count == 6'd35 || sample_count == 12'd3999) address <= address + 9'd1;
+        end
+    end
+    else
+    begin
+        buf_count <= 6'd0;
+        write_enable_0 <= 1'd0;
+        address <= 10'd0;
+    end
+end
+
+/* バッファへのデータの取り込みここまで */
+
+
 logic [17:0] code_nco_phase;
 logic car_code_nco;
 
@@ -248,9 +313,7 @@ logic [11:0] ca_code_counter;
 logic [35:0] data_part;
 logic signed [11:0] integrator_i_part;
 logic signed [11:0] integrator_q_part;
-logic [2:0] incof_count;
 logic [8:0] data_block_counter;
-
 
 always_ff @(posedge clk or negedge rst)
 begin
@@ -259,15 +322,12 @@ begin
         integrator_counter <= 14'b0;
         integrator_i_part <= 12'sd0;
         integrator_q_part <= 12'sd0;
-        data_part <= 32'd0;
-        incoh_count <= 3'd0;
         data_block_counter <= 9'd0;
 
         sat0 <= 6'd32;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
-        code_nco_frac <= 0;
         code_nco_phase <= 18'b0;
         doppler_phase <= 16'b0;
         doppler_omega <= 16'b0;
@@ -284,17 +344,14 @@ begin
         if (current_state == HOLD)
         begin
             integrator_counter <= 14'b0;
-            data_part <= 32'd0;
             integrator_i_part <= 12'sd0;
             integrator_q_part <= 12'sd0;
-            incoh_count <= 3'd0;
             data_block_counter <= 9'd0;
 
             sat0 <= 6'd31;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
-            code_nco_frac <= 0;
             code_nco_phase <= 18'b0;
             doppler_phase <= 16'b0;
             doppler_omega <= 16'b0;
@@ -305,18 +362,11 @@ begin
             ca_code_counter <= 12'b0;
         end
 
-        else if (current_state == CORRECT_SAMPLE)
-        begin
-
-        end
-
-        else if (current_state == ACQ_INIT)
+                else if (current_state == ACQ_INIT)
         begin
             integrator_counter <= 14'b0;
-            data_part <= 32'd0;
             integrator_i_part <= 12'sd0;
             integrator_q_part <= 12'sd0;
-            incoh_count <= 3'd0;
             data_block_counter <= 9'd0;
 
             g1 <= w_g1;
@@ -329,9 +379,9 @@ begin
 
         else if (current_state == CORR)
         begin
-            integrator_counter <= integrator_counter + 14'b1;
-            integrator_i_p = integrator_i + corr(tap(sat0), g1, g2, i[data_count]^lo_i);
-            integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]^lo_q);
+            //integrator_counter <= integrator_counter + 14'b1;
+            //integrator_i_p = integrator_i + corr(tap(sat0), g1, g2, i[data_count]^lo_i);
+            //integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]^lo_q);
 
             {car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
@@ -359,13 +409,11 @@ begin
         else if (current_state == CODE_PHASE_SET)
         begin
             code_phase <= code_phase + 1'b1;
-            code_nco_frac <= 5'b0;
         end
 
         else if (current_state == DOPPLER_SET)
         begin
             code_phase <= 10'b0;
-            code_nco_frac <= 5'd0;
             doppler_phase <= 16'b0;
             doppler_omega <= doppler_omega + DOPPLER_STEP;
             doppler_counter <= doppler_counter + 1'b1;
