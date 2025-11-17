@@ -366,7 +366,7 @@ begin
             ca_code_counter <= 12'b0;
         end
 
-                else if (current_state == ACQ_INIT)
+        else if (current_state == ACQ_INIT)
         begin
             integrator_counter <= 14'b0;
             integrator_i_part <= 12'sd0;
