@@ -145,7 +145,7 @@ begin
         else next_state = CORR_COMPLETE;
     end
 
-    CORR_COMPLETE: next_state = CODE_PHASE_SET; // next_state = CODE_NCO_SET;
+    CORR_COMPLETE: next_state = CODE_PHASE_SET;
 
     CODE_PHASE_SET:
     begin
@@ -161,8 +161,7 @@ begin
 
     SAT_SET:
     begin
-        //if (sat_counter < 3'd3) next_state = ACQ_INIT;
-        next_state = DONE;//else next_state = DONE;
+        next_state = DONE;
     end
     DONE: next_state = HOLD;
     default: next_state = HOLD;
@@ -188,10 +187,13 @@ logic [35:0] dataout_q;
 logic [35:0] datain_q;
 logic [9:0] address;
 logic write_enable_0;
+logic [9:0] acq_address;
+logic [9:0] corr_address;
+assign address = (current_state == CORRECT_SAMPLE)? acq_address: corr_address;
 
 logic [5:0] buf_count;
 logic [11:0] sample_count;
-logic [3:0] incoh_count;
+logic [3:0] block_count;
 logic flag_buf_count;
 logic [1:0] flag_reg;
 logic complete_correct;
@@ -228,9 +230,9 @@ begin
         datain_q <= 36'd0;
         buf_count <= 6'd0;
         sample_count <= 12'd0;
-        incoh_count <= 4'd0;
+        block_count <= 4'd0;
         write_enable_0 <= 1'd0;
-        address <= 10'd0;
+        acq_address <= 10'd0;
         flag_reg <= 2'd0;
     end
     else if (current_state == CORRECT_SAMPLE)
@@ -257,16 +259,16 @@ begin
             else
             begin
                 sample_count <= 12'd0;
-                incoh_count <= incoh_count + 4'b1;
+                block_count <= block_count + 4'b1;
             end
 
 
             if (buf_count == 6'd35 || sample_count == 12'd3999) write_enable_0 <= 1'd1;
             else write_enable_0 <= 1'd0;
 
-            if (buf_count == 6'd35 || sample_count == 12'd3999) address <= address + 9'd1;
+            if (buf_count == 6'd35 || sample_count == 12'd3999) acq_address <= acq_address + 9'd1;
 
-            if (incoh_count == 4'd8 && write_enable_0 == 1'd1) complete_correct <= 1'd1;
+            if (block_count == 4'd8 && write_enable_0 == 1'd1) complete_correct <= 1'd1;
             else complete_correct <= 1'd0;
         end
     end
@@ -274,8 +276,9 @@ begin
     begin
         buf_count <= 6'd0;
         write_enable_0 <= 1'd0;
-        address <= 10'd0;
+        acq_address <= 10'd0;
         complete_correct <= 1'd0;
+        block_count <= 4'd0;
     end
 end
 
@@ -314,19 +317,29 @@ logic [2:0] sat_counter;
 
 logic [11:0] ca_code_counter;
 
-logic [35:0] data_part;
-logic signed [11:0] integrator_i_part;
-logic signed [11:0] integrator_q_part;
-logic [8:0] data_block_counter;
+logic [35:0] corr_data_i;
+logic [35:0] corr_data_q;
+logic [5:0] corr_data_counter;
+logic [11:0] corr_sample_counter;
+logic [3:0] incoh_counter;
+logic signed [11:0] integrator_i;
+logic signed [11:0] integrator_q;
+logic [15:0] power_sum;
 
 always_ff @(posedge clk or negedge rst)
 begin
     if (!rst)
     begin
+        corr_data_i <= 36'd0;
+        corr_data_q <= 36'd0;
+        corr_data_counter <= 6'd0;
+        corr_sample_counter <= 12'd0;
+        corr_address <= 10'd0;
+        incoh_counter <= 9'd0;
+
         integrator_counter <= 14'b0;
         integrator_i_part <= 12'sd0;
         integrator_q_part <= 12'sd0;
-        data_block_counter <= 9'd0;
 
         sat0 <= 6'd32;
         g1 <= 10'b11_1111_1111;
@@ -347,10 +360,15 @@ begin
     begin
         if (current_state == HOLD)
         begin
+            corr_data <= 36'd0;
+            corr_data_counter <= 6'd0;
+            corr_sample_counter <= 12'd0;
+            corr_address <= 10'd0;
+            incoh_counter <= 9'd0;
+
             integrator_counter <= 14'b0;
             integrator_i_part <= 12'sd0;
             integrator_q_part <= 12'sd0;
-            data_block_counter <= 9'd0;
 
             sat0 <= 6'd31;
             g1 <= 10'b11_1111_1111;
@@ -368,6 +386,9 @@ begin
 
         else if (current_state == ACQ_INIT)
         begin
+
+            corr_data_counter <= 6'd0;
+
             integrator_counter <= 14'b0;
             integrator_i_part <= 12'sd0;
             integrator_q_part <= 12'sd0;
@@ -381,12 +402,19 @@ begin
             ca_code_counter <= 12'b0;
         end
 
+        else if (current_state == DATA_BLOCK_READ_WAIT)
+        begin
+            corr_data_i <= dataout_i;
+            corr_data_q <= dataout_q;
+        end
+
         else if (current_state == CORR)
         begin
-            //integrator_counter <= integrator_counter + 14'b1;
-            //integrator_i_p = integrator_i + corr(tap(sat0), g1, g2, i[data_count]^lo_i);
-            //integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]^lo_q);
+            /* 累算器 */
+            integrator_i = integrator_i + corr(tap(sat0), g1, g2, corr_data_i[corr_data_counter]^lo_i);
+            integrator_q = integrator_q + corr(tap(sat0), g1, g2, corr_data_i[corr_data_counter]^lo_q);
 
+            /* コードNCO */
             {car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
             if (car_code_nco)
             begin
@@ -395,11 +423,42 @@ begin
                 ca_code_counter <= ca_code_counter + 1'b1;
             end
 
+            /* ドップラーNCO */
             {car_doppler_nco, doppler_phase} <= doppler_phase + doppler_omega;
             lo_i <= LO_SIN[doppler_phase[15:14]];
             lo_q<= LO_COS[doppler_phase[15:14]];
-        end
 
+            /* バッファ周りのカウンタ */
+            if (corr_data_counter < 6'd35 && corr_sample_counter < 12'd3999)
+            begin
+                corr_sample_counter <= corr_sample_counter + 6'd1;
+            end
+            else
+            begin
+                corr_sample_counter <= 6'd0;
+            end
+
+            if (corr_sample_counter < 12'd3999)
+            begin
+                corr_sample_counter <= corr_sample_counter + 12'd1;
+            end
+            else
+            begin
+                corr_sample_counter <= 12'd0;
+                incoh_counter <= incoh_counter + 4'b1;
+            end
+
+            if (corr_data_counter == 6'd35 || corr_sample_counter == 12'd3999) write_enable_0 <= 1'd1;
+            else write_enable_0 <= 1'd0;
+
+            if (corr_data_counter == 6'd35 || corr_sample_counter == 12'd3999) acq_address <= acq_address + 9'd1;
+
+            if (incoh_count == 4'd8 && write_enable_0 == 1'd1) complete_correct <= 1'd1;
+            else complete_correct <= 1'd0;
+            corr_data_counter <= corr_data_counter + 7'd1;
+
+
+        end
         else if (current_state == CORR_COMPLETE)
         begin
             corr_complete <= 1'b1;
