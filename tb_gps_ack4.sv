@@ -1,4 +1,4 @@
-module tb;
+module tb_gps_ack4;
 
 
 logic clk;
@@ -6,10 +6,6 @@ logic rst;
 
 logic ack_start;
 logic adc_clk;
-logic [1:0] i_sample;
-logic [1:0] q_sample;
-logic [1:0] _i_sample;
-logic [1:0] _q_sample;
 
 logic i;
 logic q;
@@ -19,7 +15,6 @@ logic [13:0] integrator_0;
 logic corr_complete;
 logic search_complete;
 logic [9:0] code_phase;
-logic [4:0] code_nco_frac;
 logic signed [15:0] doppler_omega;
 
 gps_ack2
@@ -77,9 +72,9 @@ $finish;
 end
 
 integer fd;
-integer num;
+//integer num;
 integer rnum;
-integer k;
+//integer k;
 logic [7:0] tmp1;
 logic [7:0] tmp2;
 

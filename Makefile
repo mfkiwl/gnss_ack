@@ -3,7 +3,7 @@ SRCS = ./tb_gps_ack4.sv ./gps_ack2.sv ./code_phase_to_lfsr.sv #./tb_data_to_buf.
 OBJS = ./obj_dir/Vtb_gps_ack4
 
 $(OBJS): $(SRCS)
-	${VERILATOR_ROOT}/bin/verilator --trace --binary $(^)
+	${VERILATOR_ROOT}/bin/verilator --trace --Wall --binary $(^)
 
 sim: $(OBJS)
 	$(^)

@@ -1,6 +1,5 @@
 module gps_ack2
 #(
-    parameter SAMPLE_BITS = 14, // 16384サンプル
     parameter SAMPLE_NUM = 16384,
     parameter CODE_NCO_OMEGA = 67027, // 131 4Msps
     parameter bit [15:0] DOPPLER_STEP = 13, //
