@@ -46,29 +46,29 @@ always #100 adc_clk = ~adc_clk;
 
 initial
 begin
-$dumpfile("test.vcd");
-$dumpvars(2, tb);
-$dumpall;
-$dumpon;
+    $dumpfile("test.vcd");
+    $dumpvars(2, tb);
+    $dumpall;
+    $dumpon;
 
-#3;
-rst = 1'b1;
-clk = 1'b0;
-adc_clk = 1'b0;
-ack_start = 1'b0;
-#4
-rst = 1'b0;
-#20
-rst = 1'b1;
-#35;
-ack_start = 1'b1;
-#20;
-ack_start = 1'b0;
+    #3;
+    rst = 1'b1;
+    clk = 1'b0;
+    adc_clk = 1'b0;
+    ack_start = 1'b0;
+    #4
+    rst = 1'b0;
+    #20
+    rst = 1'b1;
+    #35;
+    ack_start = 1'b1;
+    #20;
+    ack_start = 1'b0;
 
-//@(posedge search_complete);
-repeat (40000) @(posedge adc_clk);
+    //@(posedge search_complete);
+    repeat (40000) @(posedge adc_clk);
 
-$finish;
+    $finish;
 end
 
 integer fd;
@@ -80,20 +80,16 @@ logic [7:0] tmp2;
 
 initial
 begin
+    fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
 
-clk = 1'b0;
+    repeat (65536) @(posedge adc_clk)
+    begin
+        rnum = $fread(tmp1, fd);
+        rnum = $fread(tmp2, fd);
 
-fd = $fopen("./L1_20211202_084700_4MHz_IQ.bin", "rb");
-
-repeat (65536) @(posedge clk)
-begin
-    rnum = $fread(tmp1, fd);
-    rnum = $fread(tmp2, fd);
-
-    i = tmp1[2];
-    q = ~tmp2[2];
-end
-//$finish;
+        i = tmp1[2];
+        q = ~tmp2[2];
+    end
 end
 
 integer fd2;

@@ -123,7 +123,7 @@ begin
 
     CORRECT_SAMPLE:
     begin
-        if (incoh_count < 4'd8)
+        if (complete_correct == 1'd0)
         begin
             next_state = CORRECT_SAMPLE;
         end
@@ -194,6 +194,7 @@ logic [11:0] sample_count;
 logic [3:0] incoh_count;
 logic flag_buf_count;
 logic [1:0] flag_reg;
+logic complete_correct;
 
 bsram_18k_36_2u bbi
 (
@@ -264,6 +265,9 @@ begin
             else write_enable_0 <= 1'd0;
 
             if (buf_count == 6'd35 || sample_count == 12'd3999) address <= address + 9'd1;
+
+            if (incoh_count == 4'd8 && write_enable_0 == 1'd1) complete_correct <= 1'd1;
+            else complete_correct <= 1'd0;
         end
     end
     else
@@ -271,6 +275,7 @@ begin
         buf_count <= 6'd0;
         write_enable_0 <= 1'd0;
         address <= 10'd0;
+        complete_correct <= 1'd0;
     end
 end
 
