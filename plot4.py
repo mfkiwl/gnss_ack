@@ -5,7 +5,7 @@ import sys
 
 raw = []
 
-with open('./corr2.dat', 'r') as f:
+with open('./corr3.dat', 'r') as f:
 	for n in f:
 		newline = n.rstrip('\n').split(',')
 		sat = int(newline[0].rstrip('  ,').strip('  '))
@@ -39,6 +39,6 @@ print("doppler freq.: {0:d}".format(corr_data[sat1, 1][max_index]))
 print("corr: {0:d}".format(corr_data[sat1, 3][max_index]))
 
 plt.plot(corr_data[sat1, 1], corr_data[sat1, 3], '-')
-plt.ylim(0,3000)
+plt.ylim(0,5000)
 plt.show()
 

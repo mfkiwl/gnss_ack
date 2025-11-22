@@ -11,7 +11,7 @@ logic i;
 logic q;
 
 logic [5:0] sat0;
-logic [13:0] integrator_0;
+logic [15:0] integrator_0;
 logic corr_complete;
 logic search_complete;
 logic [9:0] code_phase;
@@ -20,7 +20,7 @@ logic signed [15:0] doppler_omega;
 gps_ack2
 #(
     .SAMPLE_NUM(4095),
-    .CODE_NCO_OMEGA(67072), // 131 4Msps
+    .CODE_NCO_OMEGA(67043), // 131 4Msps
     .DOPPLER_STEP(4),
     .DOPPLER_INIT(-16'sd80),
     .DOPPLER_NUM(40)
@@ -46,10 +46,12 @@ always #100 adc_clk = ~adc_clk;
 
 initial
 begin
+
     $dumpfile("test.vcd");
     $dumpvars(2, tb);
     $dumpall;
     $dumpon;
+
 
     #3;
     rst = 1'b1;
@@ -66,7 +68,9 @@ begin
     ack_start = 1'b0;
 
     //@(posedge search_complete);
-    repeat (40000) @(posedge adc_clk);
+	@(posedge corr_complete);
+	@(posedge corr_complete);
+    //repeat (40000) @(posedge adc_clk);
 
     $finish;
 end
@@ -88,7 +92,7 @@ begin
         rnum = $fread(tmp2, fd);
 
         i = tmp1[2];
-        q = ~tmp2[2];
+        q = tmp2[2];
     end
 end
 
@@ -96,7 +100,7 @@ integer fd2;
 integer rnum2;
 initial
 begin
-    fd2 = $fopen("./corr2.dat", "w");
+    fd2 = $fopen("./corr3.dat", "w");
     forever @(posedge corr_complete)
     begin
         $display("%d, %d, %d, %d", sat0, code_phase, doppler_omega, integrator_0);

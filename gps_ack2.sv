@@ -17,7 +17,7 @@ module gps_ack2
     output logic [9:0] code_phase,
     output logic signed [15:0] doppler_omega,
     output logic [5:0] sat0,
-    output logic [13:0] integrator_0,
+    output logic [15:0] integrator_0,
     output logic search_complete
 );
 
@@ -93,11 +93,11 @@ typedef enum logic [3:0]
     HOLD,
     CORRECT_SAMPLE,
     CODE_SET_WAIT,
-    DATA_BLOCK_READ_WAIT,
     ACQ_INIT,
+    DATA_BLOCK_READ_WAIT,
     CORR,
-    CORR_COMPLETE,
     INCOH_SET,
+    CORR_COMPLETE,
     CODE_PHASE_SET,
     DOPPLER_SET,
     SAT_SET,
@@ -135,15 +135,21 @@ begin
 
     CODE_SET_WAIT: next_state = ACQ_INIT;
 
-    ACQ_INIT: next_state = CORR;
+    ACQ_INIT: next_state = DATA_BLOCK_READ_WAIT;
 
     DATA_BLOCK_READ_WAIT: next_state = CORR;
 
     CORR:
     begin
-        if (corr_data_counter == 6'd35 && incoh_counter < 4'd8) next_state = DATA_BLOCK_READ_WAIT;
-        else if (corr_sample_counter == 12'd3999 && incoh_counter == 4'd7) next_state = CORR_COMPLETE;
+        if (corr_buf_counter == 6'd35 && corr_sample_counter < 12'd3999) next_state = DATA_BLOCK_READ_WAIT;
+        else if (corr_sample_counter == 12'd3999) next_state = INCOH_SET;
         else next_state = CORR;
+    end
+
+    INCOH_SET:
+    begin
+        if (incoh_counter == 4'd8) next_state = CORR_COMPLETE;
+        else next_state = DATA_BLOCK_READ_WAIT;
     end
 
     CORR_COMPLETE: next_state = CODE_PHASE_SET;
@@ -328,12 +334,15 @@ logic [11:0] ca_code_counter;
 
 logic [35:0] corr_data_i;
 logic [35:0] corr_data_q;
-logic [5:0] corr_data_counter;
+logic [5:0] corr_buf_counter;
 logic [11:0] corr_sample_counter;
 logic [3:0] incoh_counter;
 logic signed [11:0] integrator_i;
 logic signed [11:0] integrator_q;
 logic [15:0] power_sum;
+
+logic tmpi;
+logic tmpq;
 
 always_ff @(posedge clk or negedge rst)
 begin
@@ -341,7 +350,7 @@ begin
     begin
         corr_data_i <= 36'd0;
         corr_data_q <= 36'd0;
-        corr_data_counter <= 6'd0;
+        corr_buf_counter <= 6'd0;
         corr_sample_counter <= 12'd0;
         corr_address <= 10'd0;
         incoh_counter <= 4'd0;
@@ -355,8 +364,8 @@ begin
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
         code_nco_phase <= 18'b0;
-        doppler_phase <= 16'b0;
-        doppler_omega <= 16'b0;
+        doppler_phase <= 16'sd0;
+        doppler_omega <= DOPPLER_INIT;
         lo_i <= 1'b0;
         lo_q <= 1'b0;
         corr_complete <= 1'b0;
@@ -371,7 +380,7 @@ begin
         begin
             corr_data_i <= 36'd0;
             corr_data_q <= 36'd0;
-            corr_data_counter <= 6'd0;
+            corr_buf_counter <= 6'd0;
             corr_sample_counter <= 12'd0;
             corr_address <= 10'd0;
             incoh_counter <= 4'd0;
@@ -385,8 +394,8 @@ begin
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
             code_nco_phase <= 18'b0;
-            doppler_phase <= 16'b0;
-            doppler_omega <= 16'b0;
+            doppler_phase <= 16'sd0;
+            doppler_omega <= DOPPLER_INIT;
             sat_counter <= 3'd0;
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
@@ -396,8 +405,11 @@ begin
 
         else if (current_state == ACQ_INIT)
         begin
-
-            corr_data_counter <= 6'd0;
+            corr_buf_counter <= 6'd0;
+            corr_sample_counter <= 12'd0;
+            corr_address <= 10'd0;
+            incoh_counter <= 4'd0;
+            power_sum <= 16'd0;
 
             integrator_counter <= 14'b0;
             integrator_i <= 12'sd0;
@@ -405,7 +417,7 @@ begin
 
             g1 <= w_g1;
             g2 <= w_g2;
-            doppler_phase <= 16'b0;
+            doppler_phase <= 16'sd0;
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
             ca_code_counter <= 12'b0;
@@ -420,8 +432,10 @@ begin
         else if (current_state == CORR)
         begin
             /* 累算器 */
-            integrator_i <= integrator_i + corr(tap(sat0), g1, g2, corr_data_i[corr_data_counter]^lo_i);
-            integrator_q <= integrator_q + corr(tap(sat0), g1, g2, corr_data_i[corr_data_counter]^lo_q);
+            integrator_i <= integrator_i + corr(tap(sat0), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q <= integrator_q + corr(tap(sat0), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            tmpi <= corr_data_i[corr_buf_counter];
+            tmpq <= corr_data_q[corr_buf_counter];
 
             /* コードNCO */
             {car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
@@ -434,40 +448,49 @@ begin
 
             /* ドップラーNCO */
             {car_doppler_nco, doppler_phase} <= doppler_phase + doppler_omega;
-            lo_i <= LO_SIN[doppler_phase[15:14]];
-            lo_q <= LO_COS[doppler_phase[15:14]];
+            lo_i <= LO_COS[doppler_phase[15:14]];
+            lo_q <= LO_SIN[doppler_phase[15:14]];
 
             /* バッファ周りのカウンタ */
-            if (corr_data_counter < 6'd35 && corr_sample_counter < 12'd3999)
+            if (corr_buf_counter < 6'd35 && corr_sample_counter < 12'd3999)
+            begin
+                corr_buf_counter <= corr_buf_counter + 6'd1;
+            end
+            else
+            begin
+                corr_buf_counter <= 6'd0;
+            end
+
+            if (corr_sample_counter < 12'd3999)
             begin
                 corr_sample_counter <= corr_sample_counter + 12'd1;
             end
             else
             begin
                 corr_sample_counter <= 12'd0;
-            end
-
-            if (corr_sample_counter == 12'd3999)
-            begin
                 incoh_counter <= incoh_counter + 4'b1;
             end
 
-            if (corr_data_counter == 6'd35) corr_address <= corr_address + 9'd1;
-
-            /*if (incoh_count == 4'd7 && corr_sample_counter == 12'd3999) ;
-            else ;*/
-
-            corr_data_counter <= corr_data_counter + 6'd1;
-
-        end
-        else if (current_state == CORR_COMPLETE)
-        begin
-            corr_complete <= 1'b1;
+            if (corr_buf_counter == 6'd33) corr_address <= corr_address + 9'd1;
         end
 
         else if (current_state == INCOH_SET)
         begin
+            power_sum <= power_sum + {4'd0, abs(integrator_i)} + {4'd0, abs(integrator_q)};
+            integrator_i <= 12'd0;
+            integrator_q <= 12'd0;
+            corr_sample_counter <= 12'd0;
+            corr_buf_counter <= 6'd0;
+            code_nco_phase <= 18'd0;
+            g1 <= w_g1;
+            g2 <= w_g2;
+        end
 
+        else if (current_state == CORR_COMPLETE)
+        begin
+            corr_complete <= 1'b1;
+            incoh_counter <= 4'd0;
+            integrator_0 <= power_sum;
         end
 
         else if (current_state == CODE_PHASE_SET)

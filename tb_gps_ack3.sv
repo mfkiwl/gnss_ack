@@ -115,13 +115,21 @@ logic [14:0] data_count;
 
 logic [31:0] power_sum;
 
+logic tmpi;
+logic tmpq;
+
 initial
 begin
+
+    $dumpfile("test.vcd");
+    $dumpvars(2, tb);
+    $dumpall;
+    $dumpon;
 
     /* CODE phase */
     $readmemh("phase_table_rev.hex", rom);
 
-    sat0 = 6'd32;
+    sat0 = 6'd31;
     code_phase = 10'd0;
     sat0_tap = tap(sat0);
     //doppler_omega = 16'sd52;
@@ -146,12 +154,14 @@ begin
     for (n = -80; n < 80; n += 4)
     begin
         code_phase = 10'd0;
-        for (l = 0; l < 1023; l++)
+        //for (l = 0; l < 1023; l++)
+        for (l = 0; l < 1; l++)
         begin
             data_count = 15'd0;
             power_sum = 0;
             doppler_phase = 16'sd0;
             doppler_omega = n[15:0];
+			#1;
 
             for (m = 0; m < 8; m++)
             begin
@@ -159,11 +169,16 @@ begin
                 integrator_q = 12'sd0;
                 code_nco_phase = 18'd0;
                 {g1, g2} = rom[code_phase];
+				#1;
 
                 for (k = 0; k < 4000; k++)
                 begin
                     integrator_i = integrator_i + corr(tap(sat0), g1, g2, i[data_count]^lo_i);
                     integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]^lo_q);
+					tmpi = i[data_count];
+					tmpq = q[data_count];
+
+					#1;
                     {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
                     if (car_code_nco)
                     begin
@@ -179,6 +194,7 @@ begin
                     data_count = data_count + 15'd1;
                 end
                 power_sum = power_sum + {20'd0, abs(integrator_i)} + {20'd0, abs(integrator_q)};
+				#1;
             end
             $display("%d, %d, %d, %d", sat0, code_phase, doppler_omega, power_sum);
             $fwrite(fd2, "%d, %d, %d, %d\n", sat0, code_phase, doppler_omega, power_sum);
