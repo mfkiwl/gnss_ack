@@ -117,6 +117,8 @@ logic [31:0] power_sum;
 
 logic tmpi;
 logic tmpq;
+logic signed [11:0] tmpcorri;
+logic signed [11:0] tmpcorrq;
 
 initial
 begin
@@ -177,8 +179,10 @@ begin
                     integrator_q = integrator_q + corr(tap(sat0), g1, g2, q[data_count]^lo_q);
 					tmpi = i[data_count];
 					tmpq = q[data_count];
+					tmpcorri = corr(tap(sat0), g1, g2, i[data_count]^lo_i);
+					tmpcorrq = corr(tap(sat0), g1, g2, q[data_count]^lo_q);
 
-					#1;
+
                     {car_code_nco, code_nco_phase} = code_nco_phase + CODE_NCO_OMEGA;
                     if (car_code_nco)
                     begin
@@ -192,6 +196,7 @@ begin
                     lo_q = LO_SIN[doppler_phase[15:14]];
 
                     data_count = data_count + 15'd1;
+					#1;
                 end
                 power_sum = power_sum + {20'd0, abs(integrator_i)} + {20'd0, abs(integrator_q)};
 				#1;

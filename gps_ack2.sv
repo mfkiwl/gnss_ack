@@ -343,6 +343,12 @@ logic [15:0] power_sum;
 
 logic tmpi;
 logic tmpq;
+logic signed [11:0] tmpcorri;
+logic signed [11:0] tmpcorrq;
+
+logic [15:0] f_doppler_phase;
+assign f_doppler_phase = doppler_phase + doppler_omega;
+
 
 always_ff @(posedge clk or negedge rst)
 begin
@@ -359,11 +365,12 @@ begin
         integrator_i <= 12'sd0;
         integrator_q <= 12'sd0;
 
-        sat0 <= 6'd32;
+        sat0 <= 6'd31;
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
         code_nco_phase <= 18'b0;
+		car_code_nco <= 1'b0;
         doppler_phase <= 16'sd0;
         doppler_omega <= DOPPLER_INIT;
         lo_i <= 1'b0;
@@ -393,7 +400,8 @@ begin
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
-            code_nco_phase <= 18'b0;
+            code_nco_phase <= 18'd0;
+			car_code_nco <= 1'b0;
             doppler_phase <= 16'sd0;
             doppler_omega <= DOPPLER_INIT;
             sat_counter <= 3'd0;
@@ -417,7 +425,9 @@ begin
 
             g1 <= w_g1;
             g2 <= w_g2;
-            doppler_phase <= 16'sd0;
+            code_nco_phase <= 18'd0;
+			car_code_nco <= 1'b0;
+            doppler_phase <= 16'd0;
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
             ca_code_counter <= 12'b0;
@@ -436,20 +446,25 @@ begin
             integrator_q <= integrator_q + corr(tap(sat0), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
             tmpi <= corr_data_i[corr_buf_counter];
             tmpq <= corr_data_q[corr_buf_counter];
+			tmpcorri <= corr(tap(sat0), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+			tmpcorrq <= corr(tap(sat0), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
 
             /* コードNCO */
-            {car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
-            if (car_code_nco)
-            begin
-                g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
-                g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
-                ca_code_counter <= ca_code_counter + 1'b1;
-            end
+			if (corr_sample_counter < 12'd3999)
+			begin
+				{car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
+				if (code_nco_phase > (18'h3_ff_ff - CODE_NCO_OMEGA))
+				begin
+					g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
+					g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
+					ca_code_counter <= ca_code_counter + 1'b1;
+				end
 
-            /* ドップラーNCO */
-            {car_doppler_nco, doppler_phase} <= doppler_phase + doppler_omega;
-            lo_i <= LO_COS[doppler_phase[15:14]];
-            lo_q <= LO_SIN[doppler_phase[15:14]];
+				/* ドップラーNCO */
+				doppler_phase <= doppler_phase + doppler_omega;
+				lo_i <= LO_COS[doppler_phase[15:14]];
+				lo_q <= LO_SIN[doppler_phase[15:14]];
+			end
 
             /* バッファ周りのカウンタ */
             if (corr_buf_counter < 6'd35 && corr_sample_counter < 12'd3999)
@@ -471,7 +486,7 @@ begin
                 incoh_counter <= incoh_counter + 4'b1;
             end
 
-            if (corr_buf_counter == 6'd33) corr_address <= corr_address + 9'd1;
+            if (corr_buf_counter == 6'd33 || corr_sample_counter == 12'd3999) corr_address <= corr_address + 9'd1;
         end
 
         else if (current_state == INCOH_SET)
@@ -482,6 +497,7 @@ begin
             corr_sample_counter <= 12'd0;
             corr_buf_counter <= 6'd0;
             code_nco_phase <= 18'd0;
+			car_code_nco <= 1'b0;
             g1 <= w_g1;
             g2 <= w_g2;
         end
@@ -501,7 +517,7 @@ begin
         else if (current_state == DOPPLER_SET)
         begin
             code_phase <= 10'b0;
-            doppler_phase <= 16'b0;
+            doppler_phase <= 16'd0;
             doppler_omega <= doppler_omega + DOPPLER_STEP;
             doppler_counter <= doppler_counter + 1'b1;
         end

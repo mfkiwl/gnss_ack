@@ -47,10 +47,12 @@ always #100 adc_clk = ~adc_clk;
 initial
 begin
 
+	/*
     $dumpfile("test.vcd");
     $dumpvars(2, tb);
     $dumpall;
     $dumpon;
+	*/
 
 
     #3;
@@ -67,9 +69,9 @@ begin
     #20;
     ack_start = 1'b0;
 
-    //@(posedge search_complete);
-	@(posedge corr_complete);
-	@(posedge corr_complete);
+    @(posedge search_complete);
+	//@(posedge corr_complete);
+	//@(posedge corr_complete);
     //repeat (40000) @(posedge adc_clk);
 
     $finish;
