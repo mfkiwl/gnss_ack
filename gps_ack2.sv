@@ -13,11 +13,27 @@ module gps_ack2
     input wire adc_clk,
     input wire i_sample,
     input wire q_sample,
-    output logic corr_complete,
     output logic [9:0] code_phase,
     output logic signed [15:0] doppler_omega,
     output logic [5:0] sat0,
+    output logic [5:0] sat1,
+    output logic [5:0] sat2,
+    output logic [5:0] sat3,
+    output logic [5:0] sat4,
+    output logic [5:0] sat5,
+    output logic [5:0] sat6,
+    output logic [5:0] sat7,
     output logic [15:0] integrator_0,
+    output logic [15:0] integrator_1,
+    output logic [15:0] integrator_2,
+    output logic [15:0] integrator_3,
+    output logic [15:0] integrator_4,
+    output logic [15:0] integrator_5,
+    output logic [15:0] integrator_6,
+    output logic [15:0] integrator_7,
+    output logic corr_complete,
+    output logic doppler_block_complete,
+    output logic sat_block_complete,
     output logic search_complete
 );
 
@@ -168,7 +184,8 @@ begin
 
     SAT_SET:
     begin
-        next_state = DONE;
+        if (sat_counter == 3'd3) next_state = DONE;
+        else next_state = CODE_SET_WAIT;
     end
     DONE: next_state = HOLD;
     default: next_state = HOLD;
@@ -337,14 +354,31 @@ logic [35:0] corr_data_q;
 logic [5:0] corr_buf_counter;
 logic [11:0] corr_sample_counter;
 logic [3:0] incoh_counter;
-logic signed [11:0] integrator_i;
-logic signed [11:0] integrator_q;
-logic [15:0] power_sum;
 
-logic tmpi;
-logic tmpq;
-logic signed [11:0] tmpcorri;
-logic signed [11:0] tmpcorrq;
+logic signed [11:0] integrator_i0;
+logic signed [11:0] integrator_q0;
+logic signed [11:0] integrator_i1;
+logic signed [11:0] integrator_q1;
+logic signed [11:0] integrator_i2;
+logic signed [11:0] integrator_q2;
+logic signed [11:0] integrator_i3;
+logic signed [11:0] integrator_q3;
+logic signed [11:0] integrator_i4;
+logic signed [11:0] integrator_q4;
+logic signed [11:0] integrator_i5;
+logic signed [11:0] integrator_q5;
+logic signed [11:0] integrator_i6;
+logic signed [11:0] integrator_q6;
+logic signed [11:0] integrator_i7;
+logic signed [11:0] integrator_q7;
+logic [15:0] power_sum0;
+logic [15:0] power_sum1;
+logic [15:0] power_sum2;
+logic [15:0] power_sum3;
+logic [15:0] power_sum4;
+logic [15:0] power_sum5;
+logic [15:0] power_sum6;
+logic [15:0] power_sum7;
 
 logic [15:0] f_doppler_phase;
 assign f_doppler_phase = doppler_phase + doppler_omega;
@@ -362,20 +396,44 @@ begin
         incoh_counter <= 4'd0;
 
         integrator_counter <= 14'b0;
-        integrator_i <= 12'sd0;
-        integrator_q <= 12'sd0;
+        integrator_i0 <= 12'sd0;
+        integrator_q0 <= 12'sd0;
+        integrator_i1 <= 12'sd0;
+        integrator_q1 <= 12'sd0;
+        integrator_i2 <= 12'sd0;
+        integrator_q2 <= 12'sd0;
+        integrator_i3 <= 12'sd0;
+        integrator_q3 <= 12'sd0;
+        integrator_i4 <= 12'sd0;
+        integrator_q4 <= 12'sd0;
+        integrator_i5 <= 12'sd0;
+        integrator_q5 <= 12'sd0;
+        integrator_i6 <= 12'sd0;
+        integrator_q6 <= 12'sd0;
+        integrator_i7 <= 12'sd0;
+        integrator_q7 <= 12'sd0;
 
-        sat0 <= 6'd31;
+        sat0 <= 6'd1;
+        sat1 <= 6'd2;
+        sat2 <= 6'd3;
+        sat3 <= 6'd4;
+        sat4 <= 6'd5;
+        sat5 <= 6'd6;
+        sat6 <= 6'd7;
+        sat7 <= 6'd8;
+
         g1 <= 10'b11_1111_1111;
         g2 <= 10'b11_1111_1111;
         code_phase <= 10'b0;
         code_nco_phase <= 18'b0;
-		car_code_nco <= 1'b0;
+        car_code_nco <= 1'b0;
         doppler_phase <= 16'sd0;
         doppler_omega <= DOPPLER_INIT;
         lo_i <= 1'b0;
         lo_q <= 1'b0;
         corr_complete <= 1'b0;
+        doppler_block_complete <= 1'b0;
+        sat_block_complete <= 1'b0;
         search_complete <= 1'b0;
         sat_counter <= 3'd0;
         doppler_counter <= 8'b0;
@@ -393,19 +451,42 @@ begin
             incoh_counter <= 4'd0;
 
             integrator_counter <= 14'b0;
-            integrator_i <= 12'sd0;
-            integrator_q <= 12'sd0;
+            integrator_i0 <= 12'sd0;
+            integrator_q0 <= 12'sd0;
+            integrator_i1 <= 12'sd0;
+            integrator_q1 <= 12'sd0;
+            integrator_i2 <= 12'sd0;
+            integrator_q2 <= 12'sd0;
+            integrator_i3 <= 12'sd0;
+            integrator_q3 <= 12'sd0;
+            integrator_i4 <= 12'sd0;
+            integrator_q4 <= 12'sd0;
+            integrator_i5 <= 12'sd0;
+            integrator_q5 <= 12'sd0;
+            integrator_i6 <= 12'sd0;
+            integrator_q6 <= 12'sd0;
+            integrator_i7 <= 12'sd0;
+            integrator_q7 <= 12'sd0;
 
-            sat0 <= 6'd31;
+            sat0 <= 6'd1;
+            sat1 <= 6'd2;
+            sat2 <= 6'd3;
+            sat3 <= 6'd4;
+            sat4 <= 6'd5;
+            sat5 <= 6'd6;
+            sat6 <= 6'd7;
+            sat7 <= 6'd8;
             g1 <= 10'b11_1111_1111;
             g2 <= 10'b11_1111_1111;
             code_phase <= 10'b0;
             code_nco_phase <= 18'd0;
-			car_code_nco <= 1'b0;
+            car_code_nco <= 1'b0;
             doppler_phase <= 16'sd0;
             doppler_omega <= DOPPLER_INIT;
             sat_counter <= 3'd0;
             corr_complete <= 1'b0;
+            doppler_block_complete <= 1'b0;
+            sat_block_complete <= 1'b0;
             search_complete <= 1'b0;
             doppler_counter <= 8'b0;
             ca_code_counter <= 12'b0;
@@ -417,17 +498,40 @@ begin
             corr_sample_counter <= 12'd0;
             corr_address <= 10'd0;
             incoh_counter <= 4'd0;
-            power_sum <= 16'd0;
+            power_sum0 <= 16'd0;
+            power_sum1 <= 16'd0;
+            power_sum2 <= 16'd0;
+            power_sum3 <= 16'd0;
+            power_sum4 <= 16'd0;
+            power_sum5 <= 16'd0;
+            power_sum6 <= 16'd0;
+            power_sum7 <= 16'd0;
 
             integrator_counter <= 14'b0;
-            integrator_i <= 12'sd0;
-            integrator_q <= 12'sd0;
+            integrator_i0 <= 12'sd0;
+            integrator_q0 <= 12'sd0;
+            integrator_i1 <= 12'sd0;
+            integrator_q1 <= 12'sd0;
+            integrator_i2 <= 12'sd0;
+            integrator_q2 <= 12'sd0;
+            integrator_i3 <= 12'sd0;
+            integrator_q3 <= 12'sd0;
+            integrator_i4 <= 12'sd0;
+            integrator_q4 <= 12'sd0;
+            integrator_i5 <= 12'sd0;
+            integrator_q5 <= 12'sd0;
+            integrator_i6 <= 12'sd0;
+            integrator_q6 <= 12'sd0;
+            integrator_i7 <= 12'sd0;
+            integrator_q7 <= 12'sd0;
 
             g1 <= w_g1;
             g2 <= w_g2;
             code_nco_phase <= 18'd0;
-			car_code_nco <= 1'b0;
+            car_code_nco <= 1'b0;
             doppler_phase <= 16'd0;
+            doppler_block_complete <= 1'b0;
+            sat_block_complete <= 1'b0;
             corr_complete <= 1'b0;
             search_complete <= 1'b0;
             ca_code_counter <= 12'b0;
@@ -442,29 +546,39 @@ begin
         else if (current_state == CORR)
         begin
             /* 累算器 */
-            integrator_i <= integrator_i + corr(tap(sat0), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
-            integrator_q <= integrator_q + corr(tap(sat0), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
-            tmpi <= corr_data_i[corr_buf_counter];
-            tmpq <= corr_data_q[corr_buf_counter];
-			tmpcorri <= corr(tap(sat0), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
-			tmpcorrq <= corr(tap(sat0), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i0 <= integrator_i0 + corr(tap(sat0), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q0 <= integrator_q0 + corr(tap(sat0), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i1 <= integrator_i1 + corr(tap(sat1), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q1 <= integrator_q1 + corr(tap(sat1), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i2 <= integrator_i2 + corr(tap(sat2), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q2 <= integrator_q2 + corr(tap(sat2), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i3 <= integrator_i3 + corr(tap(sat3), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q3 <= integrator_q3 + corr(tap(sat3), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i4 <= integrator_i4 + corr(tap(sat4), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q4 <= integrator_q4 + corr(tap(sat4), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i5 <= integrator_i5 + corr(tap(sat5), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q5 <= integrator_q5 + corr(tap(sat5), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i6 <= integrator_i6 + corr(tap(sat6), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q6 <= integrator_q6 + corr(tap(sat6), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
+            integrator_i7 <= integrator_i7 + corr(tap(sat7), g1, g2, corr_data_i[corr_buf_counter]^lo_i);
+            integrator_q7 <= integrator_q7 + corr(tap(sat7), g1, g2, corr_data_q[corr_buf_counter]^lo_q);
 
             /* コードNCO */
-			if (corr_sample_counter < 12'd3999)
-			begin
-				{car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
-				if (code_nco_phase > (18'h3_ff_ff - CODE_NCO_OMEGA))
-				begin
-					g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
-					g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
-					ca_code_counter <= ca_code_counter + 1'b1;
-				end
+            if (corr_sample_counter < 12'd3999)
+            begin
+                {car_code_nco, code_nco_phase} <= code_nco_phase + CODE_NCO_OMEGA;
+                if (code_nco_phase > (18'h3_ff_ff - CODE_NCO_OMEGA))
+                begin
+                    g1[10:1] <= {g1[9:1], g1[3] ^ g1[10]};
+                    g2[10:1] <= {g2[9:1], g2[2] ^ g2[3] ^ g2[6] ^ g2[8] ^ g2[9] ^ g2[10]};
+                    ca_code_counter <= ca_code_counter + 1'b1;
+                end
 
-				/* ドップラーNCO */
-				doppler_phase <= doppler_phase + doppler_omega;
-				lo_i <= LO_COS[doppler_phase[15:14]];
-				lo_q <= LO_SIN[doppler_phase[15:14]];
-			end
+                /* ドップラーNCO */
+                doppler_phase <= doppler_phase + doppler_omega;
+                lo_i <= LO_COS[doppler_phase[15:14]];
+                lo_q <= LO_SIN[doppler_phase[15:14]];
+            end
 
             /* バッファ周りのカウンタ */
             if (corr_buf_counter < 6'd35 && corr_sample_counter < 12'd3999)
@@ -491,13 +605,35 @@ begin
 
         else if (current_state == INCOH_SET)
         begin
-            power_sum <= power_sum + {4'd0, abs(integrator_i)} + {4'd0, abs(integrator_q)};
-            integrator_i <= 12'd0;
-            integrator_q <= 12'd0;
+            power_sum0 <= power_sum0 + {4'd0, abs(integrator_i0)} + {4'd0, abs(integrator_q0)};
+            power_sum1 <= power_sum1 + {4'd0, abs(integrator_i1)} + {4'd0, abs(integrator_q1)};
+            power_sum2 <= power_sum2 + {4'd0, abs(integrator_i2)} + {4'd0, abs(integrator_q2)};
+            power_sum3 <= power_sum3 + {4'd0, abs(integrator_i3)} + {4'd0, abs(integrator_q3)};
+            power_sum4 <= power_sum4 + {4'd0, abs(integrator_i4)} + {4'd0, abs(integrator_q4)};
+            power_sum5 <= power_sum5 + {4'd0, abs(integrator_i5)} + {4'd0, abs(integrator_q5)};
+            power_sum6 <= power_sum6 + {4'd0, abs(integrator_i6)} + {4'd0, abs(integrator_q6)};
+            power_sum7 <= power_sum7 + {4'd0, abs(integrator_i7)} + {4'd0, abs(integrator_q7)};
+            integrator_i0 <= 12'sd0;
+            integrator_q0 <= 12'sd0;
+            integrator_i1 <= 12'sd0;
+            integrator_q1 <= 12'sd0;
+            integrator_i2 <= 12'sd0;
+            integrator_q2 <= 12'sd0;
+            integrator_i3 <= 12'sd0;
+            integrator_q3 <= 12'sd0;
+            integrator_i4 <= 12'sd0;
+            integrator_q4 <= 12'sd0;
+            integrator_i5 <= 12'sd0;
+            integrator_q5 <= 12'sd0;
+            integrator_i6 <= 12'sd0;
+            integrator_q6 <= 12'sd0;
+            integrator_i7 <= 12'sd0;
+            integrator_q7 <= 12'sd0;
+
             corr_sample_counter <= 12'd0;
             corr_buf_counter <= 6'd0;
             code_nco_phase <= 18'd0;
-			car_code_nco <= 1'b0;
+            car_code_nco <= 1'b0;
             g1 <= w_g1;
             g2 <= w_g2;
         end
@@ -506,7 +642,14 @@ begin
         begin
             corr_complete <= 1'b1;
             incoh_counter <= 4'd0;
-            integrator_0 <= power_sum;
+            integrator_0 <= power_sum0;
+            integrator_1 <= power_sum1;
+            integrator_2 <= power_sum2;
+            integrator_3 <= power_sum3;
+            integrator_4 <= power_sum4;
+            integrator_5 <= power_sum5;
+            integrator_6 <= power_sum6;
+            integrator_7 <= power_sum7;
         end
 
         else if (current_state == CODE_PHASE_SET)
@@ -520,11 +663,28 @@ begin
             doppler_phase <= 16'd0;
             doppler_omega <= doppler_omega + DOPPLER_STEP;
             doppler_counter <= doppler_counter + 1'b1;
+            doppler_block_complete <= 1'b1;
+        end
+
+        else if (current_state == SAT_SET)
+        begin
+            sat0 <= sat0 + 6'd8;
+            sat1 <= sat1 + 6'd8;
+            sat2 <= sat2 + 6'd8;
+            sat3 <= sat3 + 6'd8;
+            sat4 <= sat4 + 6'd8;
+            sat5 <= sat5 + 6'd8;
+            sat6 <= sat6 + 6'd8;
+            sat7 <= sat7 + 6'd8;
+            sat_counter <= sat_counter + 3'd1;
+            sat_block_complete <= 1'b1;
         end
 
         else if (current_state == DONE)
         begin
             corr_complete <= 1'b0;
+            doppler_block_complete <= 1'b0;
+            sat_block_complete <= 1'b0;
             search_complete <= 1'b1;
         end
     end
