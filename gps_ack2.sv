@@ -429,6 +429,7 @@ begin
         car_code_nco <= 1'b0;
         doppler_phase <= 16'sd0;
         doppler_omega <= DOPPLER_INIT;
+        doppler_counter <= 8'd0;
         lo_i <= 1'b0;
         lo_q <= 1'b0;
         corr_complete <= 1'b0;
@@ -668,6 +669,8 @@ begin
 
         else if (current_state == SAT_SET)
         begin
+            doppler_counter <= 8'd0;
+            doppler_omega <= DOPPLER_INIT;
             sat0 <= sat0 + 6'd8;
             sat1 <= sat1 + 6'd8;
             sat2 <= sat2 + 6'd8;
