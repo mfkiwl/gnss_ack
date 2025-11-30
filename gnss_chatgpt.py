@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 fs = 4.0e6             # サンプリング周波数 [Hz]
 chip_rate = 1.023e6    # C/Aコードレート [Hz]
 code_len = 1023
-prn =  26             # 対象PRN
+prn = 31             # 対象PRN
 coh_ms = 1             # コヒーレント積分時間 [ms]
-noncoh_num = 4     # 非コヒーレント回数
+noncoh_num = 8     # 非コヒーレント回数
 fd_candidates = np.arange(-5000, 5001, 500)  # ドップラー探索範囲 [Hz]
 
 # --- C/Aコード生成 (ここでは既にPRN31の±1配列があると仮定) ---
@@ -33,9 +33,11 @@ L1CA_G2_delay = ( # PRN 1 - 210
 
 def xor_bits(X):
     return bin(X).count('1') % 2
+
 L1CA       = {}
 L1CA_G1, L1CA_G2 = [], []
 CHIP = (1, -1) # {0,1} <-> {+1,-1}
+
 def gen_code_L1CA(prn):
     if prn < 1 or prn > 210:
         return NONE
@@ -114,8 +116,14 @@ for fi, fd in enumerate(fd_candidates):
             i_corr = xor_corr(i_mixed[start:stop], local_code)
             q_corr = xor_corr(q_mixed[start:stop], local_code)
 
+            if code_delay == 296:
+                print(i_corr)
+                print(q_corr)
+
             power_sum += np.abs(i_corr) + np.abs(q_corr)
 
+        if code_delay == 296:
+            print(power_sum)
         corr_map[fi, code_delay] = power_sum
 
 # --- 結果表示 ---

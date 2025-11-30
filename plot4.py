@@ -35,7 +35,7 @@ print("Sat: {0:d}".format(sat))
 max_index = np.argmax(corr_data[sat1, 3])
 print("Index: {0:d}".format(max_index))
 print("code phase: {0:d}".format(corr_data[sat1, 1][max_index]))
-print("doppler freq.: {0:d}".format(corr_data[sat1, 1][max_index]))
+print("doppler freq.: {0:d}".format(corr_data[sat1, 2][max_index]))
 print("corr: {0:d}".format(corr_data[sat1, 3][max_index]))
 
 plt.plot(corr_data[sat1, 1], corr_data[sat1, 3], '-')
