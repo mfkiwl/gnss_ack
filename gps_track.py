@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 fs = 4.0e6             # サンプリング周波数 [Hz]
 chip_rate = 1.023e6    # C/Aコードレート [Hz]
 code_len = 1023
-prn = 31             # 対象PRN
+prn = 31         # 対象PRN
 douppler_init = 0
 code_nco_omega = 67043
 init_code_phase = 296
@@ -68,7 +68,7 @@ def gen_code_L1CA_G2(N):
 cacode = gen_code_L1CA(prn)
 
 cacode = (cacode & 0x4) >> 2
-#print(cacode)
+print(cacode)
 
 # --- データ読み込み ---
 raw = np.fromfile('L1_20211202_084700_4MHz_IQ.bin', dtype=np.int8)
@@ -87,10 +87,10 @@ print(f"Loaded {samples/fs*1000:.1f} ms of data")
 
 # --- トラッキング ---
 def cos(param):
-	return 1
+    return 1
 
 def sin(param):
-	return 0
+    return 0
 
 carrier_i = 0.0;
 carrier_q = 0.0;
@@ -102,18 +102,15 @@ doppler_omega = 0
 
 CODE_FULL = 0x3ffff
 
+cacode = np.roll(cacode, init_code_phase)
+
 code_nco_punctual = 0
 code_nco_early = code_nco_omega//2
 code_nco_late = CODE_FULL - code_nco_omega//2
 
-print(code_nco_omega)
-print(code_nco_punctual)
-print(code_nco_early)
-print(code_nco_late)
-
-code_phase_early = init_code_phase
-code_phase_punctual = init_code_phase
-code_phase_late = init_code_phase
+code_phase_early = 0
+code_phase_punctual = 0
+code_phase_late = 0
 
 coherent_data_counter = 0
 integrator_i_punctual = 0
@@ -129,6 +126,9 @@ track_early_i = np.zeros(samples//4000+1)
 track_early_q = np.zeros(samples//4000+1)
 track_late_i = np.zeros(samples//4000+1)
 track_late_q = np.zeros(samples//4000+1)
+demod_i = np.zeros(samples)
+demod_q = np.zeros(samples)
+sample_counter = 0
 index_counter = 0
 print(track_punctual_i[index_counter])
 
@@ -136,104 +136,118 @@ incoh_counter = 0
 incoh_integ = 0
 
 def xor(x, y):
-	corr = x ^ y
-	return 1 - 2*corr
+    corr = x ^ y
+    return 1 - 2*corr
 
-for di, dq in zip(i[:32000], q[:32000]):
-	carrier_i = cos(doppler_nco)
-	carrier_q = sin(doppler_nco)
+for di, dq in zip(i, q):
+    carrier_i = cos(doppler_nco)
+    carrier_q = sin(doppler_nco)
 
-	i_mixed = di ^ carrier_i
-	q_mixed = dq ^ carrier_q
+    i_mixed = di ^ carrier_i
+    q_mixed = dq ^ carrier_q
 
-#	print('--')
-#	print("Counter: {}".format(coherent_data_counter))
-#	print("Punc.: {}".format(code_phase_punctual))
-#	print("Early: {}".format(code_phase_early))
-#	print("Late: {}".format(code_phase_late))
-	i_corr_punctual = xor(i_mixed , cacode[code_phase_punctual])
-	i_corr_early = xor(i_mixed , cacode[code_phase_early])
-	i_corr_late = xor(i_mixed , cacode[code_phase_late])
+#   print('--')
+#   print("Counter: {}".format(coherent_data_counter))
+#   print("Punc.: {}".format(code_phase_punctual))
+#   print("Early: {}".format(code_phase_early))
+#   print("Late: {}".format(code_phase_late))
+    i_corr_punctual = xor(i_mixed , cacode[code_phase_punctual])
+    i_corr_early = xor(i_mixed , cacode[code_phase_early])
+    i_corr_late = xor(i_mixed , cacode[code_phase_late])
 
-	q_corr_punctual = xor(q_mixed , cacode[code_phase_punctual])
-	q_corr_early = xor(q_mixed , cacode[code_phase_early])
-	q_corr_late = xor(q_mixed , cacode[code_phase_late])
+    q_corr_punctual = xor(q_mixed , cacode[code_phase_punctual])
+    q_corr_early = xor(q_mixed , cacode[code_phase_early])
+    q_corr_late = xor(q_mixed , cacode[code_phase_late])
 
-	integrator_i_late += i_corr_late
-	integrator_q_late += q_corr_late
-	integrator_i_early += i_corr_early
-	integrator_q_early += q_corr_early
-	integrator_i_punctual += i_corr_punctual
-	integrator_q_punctual += q_corr_punctual
+    #demod_i[sample_counter] = i_corr_punctual
+    #demod_q[sample_counter] = q_corr_punctual
+    #sample_counter += 1
 
-	code_nco_early += code_nco_omega
-	code_nco_late += code_nco_omega
-	code_nco_punctual += code_nco_omega
+    #if coherent_data_counter < 10:
+        #print("i_mixed: {}".format(i_mixed))
+        #print("q_mixed: {}".format(q_mixed))
+        #print("Index: {}".format(code_phase_punctual))
+        #print("Code punc: {}".format(cacode[code_phase_punctual]))
+        #print("Code Early: {}".format(cacode[code_phase_early]))
+        #print("Code Late: {}".format(cacode[code_phase_late]))
 
-	if CODE_FULL < code_nco_punctual:
-		code_nco_punctual -= CODE_FULL
-		code_phase_punctual += 1
-		if code_phase_punctual > 1022:
-			code_phase_punctual = 0
+    integrator_i_late += i_corr_late
+    integrator_q_late += q_corr_late
+    integrator_i_early += i_corr_early
+    integrator_q_early += q_corr_early
+    integrator_i_punctual += i_corr_punctual
+    integrator_q_punctual += q_corr_punctual
 
-	if CODE_FULL < code_nco_late:
-		code_nco_late -= CODE_FULL
-		code_phase_late += 1
-		if code_phase_late > 1022:
-			code_phase_late = 0
+    code_nco_early += code_nco_omega
+    code_nco_late += code_nco_omega
+    code_nco_punctual += code_nco_omega
 
-	if CODE_FULL < code_nco_early:
-		code_nco_early -= CODE_FULL
-		code_phase_early += 1
-		if code_phase_early > 1022:
-			code_phase_early = 0
+    if CODE_FULL < code_nco_punctual:
+        code_nco_punctual -= CODE_FULL
+        code_phase_punctual += 1
+        if code_phase_punctual > 1022:
+            code_phase_punctual = 0
 
-	coherent_data_counter += 1
+    if CODE_FULL < code_nco_late:
+        code_nco_late -= CODE_FULL
+        code_phase_late += 1
+        if code_phase_late > 1022:
+            code_phase_late = 0
 
-	if coherent_data_counter > 3999:
-		print("--")
-		print("Index: {}".format(index_counter))
-		print("Punctual I: {}".format(integrator_i_punctual))
-		print("Punctual Q: {}".format(integrator_q_punctual))
-		print("Early I: {}".format(integrator_i_early))
-		print("Early Q: {}".format(integrator_q_early))
-		print("Late I: {}".format(integrator_i_late))
-		print("Late Q: {}".format(integrator_q_late))
-		print("Early - Late I: {} ".format(integrator_i_early - integrator_i_late))
-		print("Early - Late Q: {} ".format(integrator_q_early - integrator_q_late))
-		track_late_i[index_counter] = integrator_i_late
-		track_late_q[index_counter] = integrator_q_late
-		track_early_i[index_counter] = integrator_i_early
-		track_early_q[index_counter] = integrator_q_early
-		track_punctual_i[index_counter] = integrator_i_punctual
-		track_punctual_q[index_counter] = integrator_q_punctual
+    if CODE_FULL < code_nco_early:
+        code_nco_early -= CODE_FULL
+        code_phase_early += 1
+        if code_phase_early > 1022:
+            code_phase_early = 0
 
-		incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
-		incoh_counter += 1
-		if incoh_counter > 7:
-			print("Incoh integ: {}".format(incoh_integ))
-			incoh_counter = 0
-			incoh_integ = 0
+    coherent_data_counter += 1
 
+    if coherent_data_counter > 3999:
+#        print("--")
+#        print("Index: {}".format(index_counter))
+#        print("Punctual I: {}".format(integrator_i_punctual))
+#        print("Punctual Q: {}".format(integrator_q_punctual))
+#        print("Early I: {}".format(integrator_i_early))
+#        print("Early Q: {}".format(integrator_q_early))
+#        print("Late I: {}".format(integrator_i_late))
+#        print("Late Q: {}".format(integrator_q_late))
+#        print("Early - Late I: {} ".format(integrator_i_early - integrator_i_late))
+#        print("Early - Late Q: {} ".format(integrator_q_early - integrator_q_late))
+        track_late_i[index_counter] = integrator_i_late
+        track_late_q[index_counter] = integrator_q_late
+        track_early_i[index_counter] = integrator_i_early
+        track_early_q[index_counter] = integrator_q_early
+        track_punctual_i[index_counter] = integrator_i_punctual
+        track_punctual_q[index_counter] = integrator_q_punctual
 
-		integrator_i_late = 0
-		integrator_q_late = 0
-		integrator_i_punctual = 0
-		integrator_q_punctual = 0
-		integrator_i_early = 0
-		integrator_q_early = 0
-		coherent_data_counter = 0
-		index_counter += 1
+        incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
+        incoh_counter += 1
+        if incoh_counter > 7:
+            print("Incoh integ: {}".format(incoh_integ))
+            incoh_counter = 0
+            incoh_integ = 0
 
 
+        integrator_i_late = 0
+        integrator_q_late = 0
+        integrator_i_punctual = 0
+        integrator_q_punctual = 0
+        integrator_i_early = 0
+        integrator_q_early = 0
+        coherent_data_counter = 0
+        index_counter += 1
 
 
 fig = plt.figure()
-ax = fig.add_subplot(111)
+ax = fig.add_subplot(211)
 ax.plot(track_punctual_i)
 ax.plot(track_punctual_q)
-ax.plot(track_early_i - track_late_i)
-ax.plot(track_early_q - track_late_q)
+#ax.plot(track_early_i - track_late_i)
+#ax.plot(track_early_q - track_late_q)
+
+ay = fig.add_subplot(212)
+ay.plot(track_punctual_i, track_punctual_q, ".")
+ay.axis("equal")
 plt.show()
 
 

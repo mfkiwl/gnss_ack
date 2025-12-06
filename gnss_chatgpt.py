@@ -8,7 +8,7 @@ code_len = 1023
 prn = 31             # 対象PRN
 coh_ms = 1             # コヒーレント積分時間 [ms]
 noncoh_num = 8     # 非コヒーレント回数
-fd_candidates = np.arange(-5000, 5001, 500)  # ドップラー探索範囲 [Hz]
+fd_candidates = np.arange(-500, 500, 500)  # ドップラー探索範囲 [Hz]
 
 # --- C/Aコード生成 (ここでは既にPRN31の±1配列があると仮定) ---
 # cacode = np.array([...], dtype=np.int8)
@@ -117,13 +117,21 @@ for fi, fd in enumerate(fd_candidates):
             q_corr = xor_corr(q_mixed[start:stop], local_code)
 
             if code_delay == 296:
-                print(i_corr)
-                print(q_corr)
+                for n in zip(i_mixed[:10], q_mixed[:10], local_code[:10]):
+                    #print("i_mixed: {}".format(n[0]))
+                    #print("q_mixed: {}".format(n[1]))
+                    print("code: {}".format(n[2]))
+
+
+            if code_delay == 296:
+                print("--- {} ---".format(blk))
+                print("i: {}".format(i_corr))
+                print("q: {}".format(q_corr))
 
             power_sum += np.abs(i_corr) + np.abs(q_corr)
 
         if code_delay == 296:
-            print(power_sum)
+            print("Power sum: {}".format(power_sum))
         corr_map[fi, code_delay] = power_sum
 
 # --- 結果表示 ---
