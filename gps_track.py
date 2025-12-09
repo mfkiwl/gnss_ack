@@ -126,6 +126,8 @@ track_early_i = np.zeros(samples//4000+1)
 track_early_q = np.zeros(samples//4000+1)
 track_late_i = np.zeros(samples//4000+1)
 track_late_q = np.zeros(samples//4000+1)
+errors = np.zeros(samples//4000+1)
+nco_omegas = np.zeros(samples//4000+1)
 demod_i = np.zeros(samples)
 demod_q = np.zeros(samples)
 sample_counter = 0
@@ -133,6 +135,7 @@ index_counter = 0
 
 incoh_counter = 0
 incoh_integ = 0
+
 
 def xor(x, y):
     corr = x ^ y
@@ -192,13 +195,13 @@ for di, dq in zip(i, q):
         track_punctual_i[index_counter] = integrator_i_punctual
         track_punctual_q[index_counter] = integrator_q_punctual
 
+        errors[index_counter] = np.arctan2(integrator_i_punctual, integrator_q_punctual)
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
         if incoh_counter > 7:
             print("Incoh integ: {}".format(incoh_integ))
             incoh_counter = 0
             incoh_integ = 0
-
 
         integrator_i_late = 0
         integrator_q_late = 0
@@ -211,13 +214,16 @@ for di, dq in zip(i, q):
 
 
 fig = plt.figure()
-ax = fig.add_subplot(211)
+ax = fig.add_subplot(311)
 ax.plot(track_punctual_i)
 ax.plot(track_punctual_q)
 #ax.plot(track_early_i - track_late_i)
 #ax.plot(track_early_q - track_late_q)
 
-ay = fig.add_subplot(212)
+az = fig.add_subplot(312)
+az.plot(errors)
+
+ay = fig.add_subplot(313)
 ay.plot(track_punctual_i, track_punctual_q, ".")
 ay.axis("equal")
 plt.show()
