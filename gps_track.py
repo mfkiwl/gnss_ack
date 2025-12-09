@@ -130,7 +130,6 @@ demod_i = np.zeros(samples)
 demod_q = np.zeros(samples)
 sample_counter = 0
 index_counter = 0
-print(track_punctual_i[index_counter])
 
 incoh_counter = 0
 incoh_integ = 0
@@ -146,11 +145,6 @@ for di, dq in zip(i, q):
     i_mixed = di ^ carrier_i
     q_mixed = dq ^ carrier_q
 
-#   print('--')
-#   print("Counter: {}".format(coherent_data_counter))
-#   print("Punc.: {}".format(code_phase_punctual))
-#   print("Early: {}".format(code_phase_early))
-#   print("Late: {}".format(code_phase_late))
     i_corr_punctual = xor(i_mixed , cacode[code_phase_punctual])
     i_corr_early = xor(i_mixed , cacode[code_phase_early])
     i_corr_late = xor(i_mixed , cacode[code_phase_late])
@@ -158,18 +152,6 @@ for di, dq in zip(i, q):
     q_corr_punctual = xor(q_mixed , cacode[code_phase_punctual])
     q_corr_early = xor(q_mixed , cacode[code_phase_early])
     q_corr_late = xor(q_mixed , cacode[code_phase_late])
-
-    #demod_i[sample_counter] = i_corr_punctual
-    #demod_q[sample_counter] = q_corr_punctual
-    #sample_counter += 1
-
-    #if coherent_data_counter < 10:
-        #print("i_mixed: {}".format(i_mixed))
-        #print("q_mixed: {}".format(q_mixed))
-        #print("Index: {}".format(code_phase_punctual))
-        #print("Code punc: {}".format(cacode[code_phase_punctual]))
-        #print("Code Early: {}".format(cacode[code_phase_early]))
-        #print("Code Late: {}".format(cacode[code_phase_late]))
 
     integrator_i_late += i_corr_late
     integrator_q_late += q_corr_late
@@ -203,16 +185,6 @@ for di, dq in zip(i, q):
     coherent_data_counter += 1
 
     if coherent_data_counter > 3999:
-#        print("--")
-#        print("Index: {}".format(index_counter))
-#        print("Punctual I: {}".format(integrator_i_punctual))
-#        print("Punctual Q: {}".format(integrator_q_punctual))
-#        print("Early I: {}".format(integrator_i_early))
-#        print("Early Q: {}".format(integrator_q_early))
-#        print("Late I: {}".format(integrator_i_late))
-#        print("Late Q: {}".format(integrator_q_late))
-#        print("Early - Late I: {} ".format(integrator_i_early - integrator_i_late))
-#        print("Early - Late Q: {} ".format(integrator_q_early - integrator_q_late))
         track_late_i[index_counter] = integrator_i_late
         track_late_q[index_counter] = integrator_q_late
         track_early_i[index_counter] = integrator_i_early
