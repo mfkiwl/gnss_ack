@@ -105,6 +105,10 @@ q_mixed = 0
 doppler_nco = 0
 doppler_omega = 0
 
+in0 = 0
+qn0 = 0
+dp_error = 0
+dp_error_prev = 0
 CODE_FULL = 0x3ffff
 
 cacode = np.roll(cacode, init_code_phase)
@@ -124,10 +128,6 @@ integrator_i_early = 0
 integrator_q_early = 0
 integrator_i_late = 0
 integrator_q_late = 0
-in0 = 0
-qn0 = 0
-error = 0
-error_prev = 0
 
 track_punctual_i = np.zeros(samples//4000+1)
 track_punctual_q = np.zeros(samples//4000+1)
@@ -210,13 +210,13 @@ for di, dq in zip(i, q):
         track_punctual_q[index_counter] = integrator_q_punctual
 
         #ee = int(np.floor(np.arctan2(integrator_i_punctual, integrator_q_punctual)))
-        error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
-        print("ERR: {}".format(error))
+        dp_error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
+        print("ERR: {}".format(dp_error))
         in0 = integrator_i_punctual
         qn0 = integrator_q_punctual
-        errors[index_counter] = error
-        doppler_omega -= int(error//6000) + int((error - error_prev)//600000)
-        error_prev = error
+        errors[index_counter] = dp_error
+        doppler_omega -= int(dp_error//6000) + int((dp_error - dp_error_prev)//600000)
+        dp_error_prev = dp_error
         print("DP omega: {}".format(doppler_omega))
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
