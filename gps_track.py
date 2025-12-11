@@ -87,10 +87,15 @@ print(f"Loaded {samples/fs*1000:.1f} ms of data")
 
 # --- トラッキング ---
 def cos(param):
-    return 1
+    ss = [0, 0, 1 ,1]
+    t = (param >> 22) & 0x3
+    return ss[t]
+
 
 def sin(param):
-    return 0
+    ss = [0, 1, 1 ,0]
+    t = (param >> 22) & 0x3
+    return ss[t]
 
 carrier_i = 0.0;
 carrier_q = 0.0;
@@ -119,6 +124,10 @@ integrator_i_early = 0
 integrator_q_early = 0
 integrator_i_late = 0
 integrator_q_late = 0
+in0 = 0
+qn0 = 0
+error = 0
+error_prev = 0
 
 track_punctual_i = np.zeros(samples//4000+1)
 track_punctual_q = np.zeros(samples//4000+1)
@@ -167,6 +176,11 @@ for di, dq in zip(i, q):
     code_nco_late += code_nco_omega
     code_nco_punctual += code_nco_omega
 
+    if doppler_nco > 0xffffff:
+        doppler_nco -= 0xffffff
+        doppler_nco += doppler_omega
+    else:
+        doppler_nco += doppler_omega
     if CODE_FULL < code_nco_punctual:
         code_nco_punctual -= CODE_FULL
         code_phase_punctual += 1
@@ -195,7 +209,15 @@ for di, dq in zip(i, q):
         track_punctual_i[index_counter] = integrator_i_punctual
         track_punctual_q[index_counter] = integrator_q_punctual
 
-        errors[index_counter] = np.arctan2(integrator_i_punctual, integrator_q_punctual)
+        #ee = int(np.floor(np.arctan2(integrator_i_punctual, integrator_q_punctual)))
+        error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
+        print("ERR: {}".format(error))
+        in0 = integrator_i_punctual
+        qn0 = integrator_q_punctual
+        errors[index_counter] = error
+        doppler_omega -= int(error//6000) + int((error - error_prev)//600000)
+        error_prev = error
+        print("DP omega: {}".format(doppler_omega))
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
         if incoh_counter > 7:
