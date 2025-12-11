@@ -117,6 +117,9 @@ code_nco_punctual = 0
 code_nco_early = code_nco_omega//2
 code_nco_late = CODE_FULL - code_nco_omega//2
 
+code_error = 0
+
+
 code_phase_early = 0
 code_phase_punctual = 0
 code_phase_late = 0
@@ -211,17 +214,34 @@ for di, dq in zip(i, q):
 
         #ee = int(np.floor(np.arctan2(integrator_i_punctual, integrator_q_punctual)))
         dp_error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
-        print("ERR: {}".format(dp_error))
+        print("DP ERR: {}".format(dp_error))
         in0 = integrator_i_punctual
         qn0 = integrator_q_punctual
         errors[index_counter] = dp_error
         doppler_omega -= int(dp_error//6000) + int((dp_error - dp_error_prev)//600000)
         dp_error_prev = dp_error
         print("DP omega: {}".format(doppler_omega))
+
+
+
+
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
         if incoh_counter > 7:
+            code_error = ((integrator_i_late - integrator_i_early)*integrator_i_punctual + (integrator_q_late - integrator_q_early)*integrator_q_punctual)//2
+            print("I early: {}".format(integrator_i_early))
+            print("I late: {}".format(integrator_i_late))
+            print("Q early: {}".format(integrator_q_early))
+            print("Q late: {}".format(integrator_q_late))
+            print("I punctual: {}".format(integrator_i_punctual))
+            print("Q punctual: {}".format(integrator_q_punctual))
+            print("CODE ERR: {}".format(code_error))
+            #code_nco_omega += code_error
+            print("CODE omega: {}".format(code_nco_omega))
+
             print("Incoh integ: {}".format(incoh_integ))
+            print()
+            print()
             incoh_counter = 0
             incoh_integ = 0
 
