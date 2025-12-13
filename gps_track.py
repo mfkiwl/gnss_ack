@@ -7,8 +7,10 @@ chip_rate = 1.023e6    # C/Aコードレート [Hz]
 code_len = 1023
 prn = 31         # 対象PRN
 douppler_init = 0
-code_nco_omega = 67043
+#code_nco_omega = 67043
+code_nco_omega = 4290772
 init_code_phase = 296
+num_coherent = 4000
 
 # --- C/Aコード生成 (ここでは既にPRN31の±1配列があると仮定) ---
 # cacode = np.array([...], dtype=np.int8)
@@ -30,7 +32,6 @@ L1CA_G2_delay = ( # PRN 1 - 210
       12, 314, 891, 212, 185, 675, 503, 150, 395, 345, 846, 798, 992, 357, 995,
      877, 112, 144, 476, 193, 109, 445, 291,  87, 399, 292, 901, 339, 208, 711,
      189, 263, 537, 663, 942, 173, 900,  30, 500, 935, 556, 373,  85, 652, 310)
-
 
 
 L1CA       = {}
@@ -91,7 +92,6 @@ def cos(param):
     t = (param >> 22) & 0x3
     return ss[t]
 
-
 def sin(param):
     ss = [0, 1, 1 ,0]
     t = (param >> 22) & 0x3
@@ -109,20 +109,23 @@ in0 = 0
 qn0 = 0
 dp_error = 0
 dp_error_prev = 0
-CODE_FULL = 0x3ffff
+CODE_FULL = 0xffffff
 
-cacode = np.roll(cacode, init_code_phase)
+cacode = np.roll(cacode, init_code_phase + 1)
 
-code_nco_punctual = 0
-code_nco_early = code_nco_omega//2
-code_nco_late = CODE_FULL - code_nco_omega//2
+#code_nco_early = code_nco_omega//2
+#code_nco_punctual = 0
+#code_nco_late = CODE_FULL - code_nco_omega//2
+code_nco = 0
 
 code_error = 0
+code_error_prev = 0
 
+half_late = 0
 
 code_phase_early = 0
 code_phase_punctual = 0
-code_phase_late = 0
+code_phase_late = 1
 
 coherent_data_counter = 0
 integrator_i_punctual = 0
@@ -132,14 +135,14 @@ integrator_q_early = 0
 integrator_i_late = 0
 integrator_q_late = 0
 
-track_punctual_i = np.zeros(samples//4000+1)
-track_punctual_q = np.zeros(samples//4000+1)
-track_early_i = np.zeros(samples//4000+1)
-track_early_q = np.zeros(samples//4000+1)
-track_late_i = np.zeros(samples//4000+1)
-track_late_q = np.zeros(samples//4000+1)
-errors = np.zeros(samples//4000+1)
-nco_omegas = np.zeros(samples//4000+1)
+track_punctual_i = np.zeros(samples//num_coherent+1)
+track_punctual_q = np.zeros(samples//num_coherent+1)
+track_early_i = np.zeros(samples//num_coherent+1)
+track_early_q = np.zeros(samples//num_coherent+1)
+track_late_i = np.zeros(samples//num_coherent+1)
+track_late_q = np.zeros(samples//num_coherent+1)
+errors = np.zeros(samples//num_coherent+1)
+nco_omegas = np.zeros(samples//num_coherent+1)
 demod_i = np.zeros(samples)
 demod_q = np.zeros(samples)
 sample_counter = 0
@@ -147,7 +150,6 @@ index_counter = 0
 
 incoh_counter = 0
 incoh_integ = 0
-
 
 def xor(x, y):
     corr = x ^ y
@@ -175,36 +177,45 @@ for di, dq in zip(i, q):
     integrator_i_punctual += i_corr_punctual
     integrator_q_punctual += q_corr_punctual
 
-    code_nco_early += code_nco_omega
-    code_nco_late += code_nco_omega
-    code_nco_punctual += code_nco_omega
 
     if doppler_nco > 0xffffff:
         doppler_nco -= 0xffffff
         doppler_nco += doppler_omega
     else:
         doppler_nco += doppler_omega
-    if CODE_FULL < code_nco_punctual:
-        code_nco_punctual -= CODE_FULL
-        code_phase_punctual += 1
-        if code_phase_punctual > 1022:
-            code_phase_punctual = 0
 
-    if CODE_FULL < code_nco_late:
-        code_nco_late -= CODE_FULL
+    code_nco += code_nco_omega
+    if CODE_FULL < code_nco:
+        code_nco -= CODE_FULL
+
         code_phase_late += 1
         if code_phase_late > 1022:
             code_phase_late = 0
 
-    if CODE_FULL < code_nco_early:
-        code_nco_early -= CODE_FULL
         code_phase_early += 1
         if code_phase_early > 1022:
             code_phase_early = 0
 
+    if (CODE_FULL//2) < code_nco:
+        if half_late == 0:
+            code_phase_punctual += 1
+            if code_phase_punctual > 1022:
+                code_phase_punctual = 0
+        half_late = 1
+
+    if code_nco < (CODE_FULL // 2):
+        half_late = 0
+
+#    print("Cnt: {}".format(coherent_data_counter))
+#    print("EARLY: {}".format(code_phase_early))
+#    print("PUNCTUAL: {}".format(code_phase_punctual))
+#    print("LATE: {}".format(code_phase_late))
+#    print()
+#    print()
+
     coherent_data_counter += 1
 
-    if coherent_data_counter > 3999:
+    if coherent_data_counter > (num_coherent - 1):
         track_late_i[index_counter] = integrator_i_late
         track_late_q[index_counter] = integrator_q_late
         track_early_i[index_counter] = integrator_i_early
@@ -214,20 +225,25 @@ for di, dq in zip(i, q):
 
         #ee = int(np.floor(np.arctan2(integrator_i_punctual, integrator_q_punctual)))
         dp_error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
-        print("DP ERR: {}".format(dp_error))
+        #print("DP ERR: {}".format(dp_error))
         in0 = integrator_i_punctual
         qn0 = integrator_q_punctual
         errors[index_counter] = dp_error
-        doppler_omega -= int(dp_error//6000) + int((dp_error - dp_error_prev)//600000)
+        #doppler_omega -= int(dp_error//10000) + int((dp_error - dp_error_prev)//100000)
         dp_error_prev = dp_error
-        print("DP omega: {}".format(doppler_omega))
-
-
-
+        #print("DP omega: {}".format(doppler_omega))
 
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
-        if incoh_counter > 7:
+
+        if incoh_counter > 8:
+
+            print("Incoh integ: {}".format(incoh_integ))
+            print()
+            print()
+            incoh_counter = 0
+            incoh_integ = 0
+
             code_error = ((integrator_i_late - integrator_i_early)*integrator_i_punctual + (integrator_q_late - integrator_q_early)*integrator_q_punctual)//2
             print("I early: {}".format(integrator_i_early))
             print("I late: {}".format(integrator_i_late))
@@ -236,14 +252,11 @@ for di, dq in zip(i, q):
             print("I punctual: {}".format(integrator_i_punctual))
             print("Q punctual: {}".format(integrator_q_punctual))
             print("CODE ERR: {}".format(code_error))
-            #code_nco_omega += code_error
-            print("CODE omega: {}".format(code_nco_omega))
+            #code_nco_omega -= int(code_error//1000000000) + int((code_error - code_error_prev)//100000000000)
+            print("DD: {}".format(int(code_error//10000) + int((code_error - code_error_prev)//1000000)))
 
-            print("Incoh integ: {}".format(incoh_integ))
-            print()
-            print()
-            incoh_counter = 0
-            incoh_integ = 0
+            code_error_prev = code_error
+            print("CODE omega: {}".format(code_nco_omega))
 
         integrator_i_late = 0
         integrator_q_late = 0
@@ -253,7 +266,6 @@ for di, dq in zip(i, q):
         integrator_q_early = 0
         coherent_data_counter = 0
         index_counter += 1
-
 
 fig = plt.figure()
 ax = fig.add_subplot(311)
