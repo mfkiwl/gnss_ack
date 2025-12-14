@@ -10,7 +10,7 @@ douppler_init = 0
 #code_nco_omega = 67043
 code_nco_omega = 4290772
 init_code_phase = 296
-num_coherent = 4000
+num_coherent = 8000
 
 # --- C/Aコード生成 (ここでは既にPRN31の±1配列があると仮定) ---
 # cacode = np.array([...], dtype=np.int8)
@@ -224,7 +224,6 @@ for di, dq in zip(i, q):
         track_punctual_i[index_counter] = integrator_i_punctual
         track_punctual_q[index_counter] = integrator_q_punctual
 
-        #ee = int(np.floor(np.arctan2(integrator_i_punctual, integrator_q_punctual)))
         dp_error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
         print("DP ERR: {}".format(dp_error))
         in0 = integrator_i_punctual
@@ -234,6 +233,7 @@ for di, dq in zip(i, q):
         dp_error_prev = dp_error
         print("DF: {}".format(int(dp_error//2000) + int((dp_error - dp_error_prev)//20000)))
         print("DP omega: {}".format(doppler_omega))
+        nco_omegas[index_counter] = doppler_omega
 
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
@@ -254,8 +254,12 @@ for di, dq in zip(i, q):
             print("I punctual: {}".format(integrator_i_punctual))
             print("Q punctual: {}".format(integrator_q_punctual))
             print("CODE ERR: {}".format(code_error))
-            #code_nco_omega += int(code_error//100000) + int((code_error - code_error_prev)//1000000)
-            print("DD: {}".format(int(code_error//100000) + int((code_error - code_error_prev)//1000000)))
+            #code_nco_omega -= int(code_error//10000) + int((code_error - code_error_prev)//100000)
+            if code_error < -4:
+                code_nco_omega -= 2
+            elif code_error > 4:
+                code_nco_omega += 2
+            print("DD: {}".format(int(code_error//10000) + int((code_error - code_error_prev)//100000)))
 
             code_error_prev = code_error
             print("CODE omega: {}".format(code_nco_omega))
@@ -270,18 +274,23 @@ for di, dq in zip(i, q):
         index_counter += 1
 
 fig = plt.figure()
-ax = fig.add_subplot(311)
+ax = fig.add_subplot(411)
 ax.plot(track_punctual_i)
 ax.plot(track_punctual_q)
 #ax.plot(track_early_i - track_late_i)
 #ax.plot(track_early_q - track_late_q)
 
-az = fig.add_subplot(312)
+az = fig.add_subplot(412)
 az.plot(errors)
 
-ay = fig.add_subplot(313)
-ay.plot(track_punctual_i[500:], track_punctual_q[500:], ".")
+aa = fig.add_subplot(413)
+aa.plot(nco_omegas)
+
+ay = fig.add_subplot(414)
+ay.plot(track_punctual_i, track_punctual_q, ".")
 ay.axis("equal")
+
+fig.tight_layout()
 plt.show()
 
 
