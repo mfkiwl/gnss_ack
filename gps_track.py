@@ -143,7 +143,8 @@ track_early_q = np.zeros(samples//num_coherent+1)
 track_late_i = np.zeros(samples//num_coherent+1)
 track_late_q = np.zeros(samples//num_coherent+1)
 errors = np.zeros(samples//num_coherent+1)
-nco_omegas = np.zeros(samples//num_coherent+1)
+code_nco_omegas = np.zeros(samples//num_coherent+1)
+dp_nco_omegas = np.zeros(samples//num_coherent+1)
 demod_i = np.zeros(samples)
 demod_q = np.zeros(samples)
 sample_counter = 0
@@ -151,6 +152,9 @@ index_counter = 0
 
 incoh_counter = 0
 incoh_integ = 0
+
+lock_pll = 0
+mode_count = 0
 
 def xor(x, y):
     corr = x ^ y
@@ -207,13 +211,6 @@ for di, dq in zip(i, q):
     if code_nco < (CODE_NCO_FULL // 2):
         half_late = 0
 
-#    print("Cnt: {}".format(coherent_data_counter))
-#    print("EARLY: {}".format(code_phase_early))
-#    print("PUNCTUAL: {}".format(code_phase_punctual))
-#    print("LATE: {}".format(code_phase_late))
-#    print()
-#    print()
-
     coherent_data_counter += 1
 
     if coherent_data_counter > (num_coherent - 1):
@@ -224,19 +221,33 @@ for di, dq in zip(i, q):
         track_punctual_i[index_counter] = integrator_i_punctual
         track_punctual_q[index_counter] = integrator_q_punctual
 
-        dp_error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
+        dp_fll_error = integrator_i_punctual*qn0 - integrator_q_punctual*in0
+        dp_pll_error = np.sign(integrator_i_punctual) * integrator_q_punctual
+        if lock_pll == 0:
+            dp_error = dp_fll_error
+            df = int(dp_error//2000) + int((dp_error - dp_error_prev)//20000)
+            dp_error_prev = dp_error
+        else:
+            dp_error = +dp_pll_error
+            df = int(dp_error//1000) + int((dp_error - dp_error_prev)//10000)
+            dp_error_prev = dp_error
         print("DP ERR: {}".format(dp_error))
         in0 = integrator_i_punctual
         qn0 = integrator_q_punctual
         errors[index_counter] = dp_error
-        doppler_omega += int(dp_error//2000) + int((dp_error - dp_error_prev)//20000)
-        dp_error_prev = dp_error
-        print("DF: {}".format(int(dp_error//2000) + int((dp_error - dp_error_prev)//20000)))
+        doppler_omega += df
+        print("DF: {}".format(df))
         print("DP omega: {}".format(doppler_omega))
-        nco_omegas[index_counter] = doppler_omega
+        dp_nco_omegas[index_counter] = doppler_omega
+        code_nco_omegas[index_counter] = code_nco_omega
 
         incoh_integ += np.abs(integrator_i_punctual) + np.abs(integrator_q_punctual)
         incoh_counter += 1
+
+        mode_count += 1
+        if mode_count > 20:
+            lock_pll = 1
+
 
         if incoh_counter > 8:
 
@@ -259,7 +270,7 @@ for di, dq in zip(i, q):
                 code_nco_omega -= 2
             elif code_error > 4:
                 code_nco_omega += 2
-            print("DD: {}".format(int(code_error//10000) + int((code_error - code_error_prev)//100000)))
+            #print("DD: {}".format(int(code_error//20000) + int((code_error - code_error_prev)//200000)))
 
             code_error_prev = code_error
             print("CODE omega: {}".format(code_nco_omega))
@@ -274,19 +285,26 @@ for di, dq in zip(i, q):
         index_counter += 1
 
 fig = plt.figure()
-ax = fig.add_subplot(411)
+ax = fig.add_subplot(511)
 ax.plot(track_punctual_i)
 ax.plot(track_punctual_q)
 #ax.plot(track_early_i - track_late_i)
 #ax.plot(track_early_q - track_late_q)
+ax.axes.get_xaxis().set_visible(False)
 
-az = fig.add_subplot(412)
+az = fig.add_subplot(512)
 az.plot(errors)
+az.axes.get_xaxis().set_visible(False)
 
-aa = fig.add_subplot(413)
-aa.plot(nco_omegas)
+aa = fig.add_subplot(513)
+aa.plot(dp_nco_omegas[:-1])
+aa.axes.get_xaxis().set_visible(False)
 
-ay = fig.add_subplot(414)
+aa = fig.add_subplot(514)
+aa.plot(code_nco_omegas[:-1])
+aa.axes.get_xaxis().set_visible(False)
+
+ay = fig.add_subplot(515)
 ay.plot(track_punctual_i, track_punctual_q, ".")
 ay.axis("equal")
 
